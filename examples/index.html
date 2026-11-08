@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jade Agent Kit demo</title>
+<style>
+  :root { --bg: #0d1110; --panel: #141a18; --line: #24302c; --text: #d9e6e1; --dim: #7f948d; --jade: #3ecf9a; --err: #ff6b6b; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, sans-serif; }
+  header { padding: 14px 16px; border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  header b { color: var(--jade); font-size: 16px; } header span { color: var(--dim); }
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px 16px; }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; min-height: 420px; overflow: hidden; }
+  h2 { margin: 0; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--dim); padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  pre { margin: 0; flex: 1; overflow: auto; padding: 10px 12px; font: 12.5px/1.5 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; max-height: 60vh; }
+  .err { color: var(--err); } .cmd { color: var(--jade); } .tool { color: #c9a227; } .think { color: var(--dim); font-style: italic; }
+  form { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--line); }
+  input { flex: 1; min-width: 0; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font: inherit; }
+  input:focus { outline: 2px solid var(--jade); outline-offset: -1px; }
+  button { background: var(--jade); color: #06231a; border: 0; border-radius: 6px; padding: 8px 14px; font: inherit; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .row { display: flex; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<header><b>Jade Agent Kit</b><span id="status">loading…</span></header>
+<main>
+  <section>
+    <h2>Shell</h2>
+    <pre id="term"></pre>
+    <form id="shForm"><input id="shIn" autocomplete="off" spellcheck="false" placeholder="ls -la /  ·  python -c 'print(1+1)'  ·  sqlite3 :memory: 'select vec_version()'"><button>Run</button></form>
+  </section>
+  <section>
+    <h2>Agent (Ollama Cloud)</h2>
+    <div class="row"><input id="key" type="password" placeholder="Ollama API key (ollama.com/settings/keys)" autocomplete="off"><input id="model" value="gpt-oss:120b" style="max-width:150px" aria-label="Model"></div>
+    <pre id="chat"></pre>
+    <form id="agForm"><input id="agIn" autocomplete="off" placeholder="Write fizzbuzz.py, run it, and show me the output"><button id="agBtn">Send</button></form>
+  </section>
+</main>
+<script type="module">
+  // In your own project: import { createKit } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/jade-agent-kit@v0.1.0/dist/jade-agent-kit.js';
+  import { createKit } from '../dist/jade-agent-kit.js';
+  const $ = id => document.getElementById(id);
+  const out = (el, text, cls) => { const s = document.createElement('span'); if (cls) s.className = cls; s.textContent = text; el.append(s); el.scrollTop = el.scrollHeight; };
+  const kit = await createKit({ persist: 'demo', files: { '/README.md': '# Welcome\nThis file system is kept in your browser.\n' } });
+  window.kit = kit;
+  kit.busybox.load().then(okk => { $('status').textContent = okk ? `BusyBox ${kit.busybox.applets.size} applets · ${kit.vfs.nodes.size} files` : 'JS shell (BusyBox unavailable)'; });
+  $('shForm').onsubmit = async e => {
+    e.preventDefault(); const cmd = $('shIn').value; if (!cmd.trim()) return; $('shIn').value = '';
+    out($('term'), `$ ${cmd}\n`, 'cmd');
+    await kit.sh.run(cmd, { onOutput: (t, isErr) => out($('term'), t, isErr ? 'err' : '') });
+  };
+  try { $('key').value = localStorage.getItem('jak-key') || ''; } catch {}
+  let agent = null;
+  $('agForm').onsubmit = async e => {
+    e.preventDefault(); const text = $('agIn').value.trim(); if (!text) return;
+    kit.ollama.apiKey = $('key').value.trim(); try { localStorage.setItem('jak-key', kit.ollama.apiKey); } catch {}
+    agent ||= kit.agent({ onEvent: ev => {
+      if (ev.type === 'text') out($('chat'), ev.delta);
+      else if (ev.type === 'thinking') out($('chat'), ev.delta, 'think');
+      else if (ev.type === 'tool_call') out($('chat'), `\n▸ ${ev.name} ${JSON.stringify(ev.args).slice(0, 200)}\n`, 'tool');
+      else if (ev.type === 'tool_result') out($('chat'), ev.result.slice(0, 600) + '\n', 'think');
+    } });
+    agent.model = $('model').value.trim() || 'gpt-oss:120b';
+    $('agIn').value = ''; $('agBtn').disabled = true; out($('chat'), `\n> ${text}\n`, 'cmd');
+    try { await agent.prompt(text); out($('chat'), '\n'); } catch (err) { out($('chat'), `\n${err.message}\n`, 'err'); } finally { $('agBtn').disabled = false; }
+  };
+</script>
+</body>
+</html>

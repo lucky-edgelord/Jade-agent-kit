@@ -1,0 +1,17 @@
+{
+  "name": "jade-agent-kit",
+  "version": "0.1.0",
+  "description": "A browser workspace for AI agents, loadable from a CDN: BusyBox shell, virtual file system, MicroPython, a Node-style JS sandbox, TensorFlow.js / ONNX / LiteRT, SQLite with sqlite-vec, BM25 search, webxdc apps, LLM tool definitions and a pi-style agent on Ollama Cloud.",
+  "type": "module",
+  "main": "dist/jade-agent-kit.js",
+  "module": "dist/jade-agent-kit.js",
+  "exports": { ".": "./dist/jade-agent-kit.js", "./src/*": "./src/*" },
+  "files": ["dist", "src", "assets", "LICENSE", "THIRD_PARTY_NOTICES.md", "README.md"],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node scripts/build.mjs && node tests/run.mjs"
+  },
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/lucky-edgelord/jade-agent-kit" },
+  "devDependencies": { "esbuild": "0.28.2", "playwright": "1.56.0" }
+}
