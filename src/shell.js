@@ -3,7 +3,7 @@ import { createShellEnv } from './internal/shell_core.js';
 
 export class ShellSession {
   /** @param {object} env from createShellEnv; @param {{ cwd?: string, env?: object, timeoutMs?: number }} opts */
-  constructor(core, { cwd = '/', env = {}, timeoutMs = 60000 } = {}) { this.core = core; this.sh = new core.Shell({ cwd, env }); this.sh.timeoutMs = timeoutMs; }
+  constructor(core, { cwd = '/', env = {}, timeoutMs = 60000 } = {}, busybox = null, engine = () => 'auto') { this.core = core; this.bb = busybox; this.engine = engine; this.sh = new core.Shell({ cwd, env }); this.sh.timeoutMs = timeoutMs; }
   get cwd() { return this.sh.cwd; } set cwd(v) { this.sh.cwd = v; }
   get env() { return this.sh.env; }
   /**
@@ -11,6 +11,8 @@ export class ShellSession {
    * @param {string} command @param {{ stdin?: string, timeoutMs?: number, onOutput?: (text: string, isErr: boolean) => void, signal?: AbortSignal }} [o]
    */
   async run(command, { stdin = '', timeoutMs, onOutput, signal } = {}) {
+    // BusyBox starts with the first command when the kit did not start it already (it falls back to JS if it cannot)
+    if (this.bb && !this.bb.ready && this.engine() !== 'js') await this.bb.load();
     const sh = this.sh; if (timeoutMs) sh.timeoutMs = timeoutMs;
     sh.onOutput = onOutput || null; sh.aborted = false;
     const ab = () => { sh.aborted = true; }; signal?.addEventListener?.('abort', ab);
@@ -28,7 +30,7 @@ export function createShell({ vfs, busybox, engine = 'auto', commands = {} }) {
   return {
     core, commands,
     /** a shell with its own working directory and variables */
-    session: (o) => new ShellSession(core, o),
+    session: (o) => new ShellSession(core, o, busybox, () => env.engine),
     /** 'auto' (BusyBox when loaded, else JS), 'wasm' (BusyBox only) or 'js' (JS applets only) */
     get engine() { return env.engine; }, set engine(e) { env.engine = e; },
   };

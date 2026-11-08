@@ -33,6 +33,9 @@ ok(r[0] === '/' && r[1] === '/src\n', 'sessions have their own working directory
 // your own commands, in every engine mode
 r = await ev(async () => { kit.shell.commands.hello = c => { c.o(`hello ${c.argv[0] ?? ''} ${c.stdin.trim()}\n`); return 0; }; const a = await kit.run('echo in | hello you'); kit.shell.engine = 'wasm'; const b = await kit.run('hello'); kit.shell.engine = 'auto'; return [a.stdout, b.stdout]; });
 ok(r[0] === 'hello you in\n' && r[1] === 'hello  \n', 'custom commands: ' + JSON.stringify(r));
+// with busybox: false, BusyBox starts with the first command
+r = await ev(async () => { const k = await K.createKit({ busybox: false }); const before = k.busybox.ready; const x = await k.run('echo hi'); return { before, after: k.busybox.ready, out: x.stdout }; });
+ok(r.before === false && r.after === true && r.out === 'hi\n', 'BusyBox loads on the first command: ' + JSON.stringify(r));
 // persistence
 await ev(() => kit.vfs.flush());
 await page.reload();
