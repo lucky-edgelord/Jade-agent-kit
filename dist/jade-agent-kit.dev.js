@@ -4651,6 +4651,162 @@ function createVectors(kit) {
   };
 }
 
+// src/decide.js
+var OLLAYA_LOCAL = "http://localhost:11435";
+var DECIDERS = /^(clef|clef-flash|laya|jev|nimble|tev1|kev|winnow|largha|decider)(?=$|[:\-])/i;
+var NAMES = { ollaya: "Ollaya", ollama: "Ollama", cloud: "Ollama Cloud" };
+var keyOf = (opts, i) => {
+  const o = String(opts[i]).trim();
+  const k = o.length && o.length <= 100 ? o : `option_${i + 1}`;
+  return opts.findIndex((x) => String(x).trim() === o) === i ? k : `option_${i + 1}`;
+};
+function toOllama(body, cloud) {
+  const maps = {}, questions = {};
+  for (const [name, q] of Object.entries(body.questions || {})) {
+    const nq = { ...q };
+    if ((q.type || "choice") === "choice" && Array.isArray(q.criteria)) {
+      const keys = q.criteria.map((_, i) => keyOf(q.criteria, i));
+      nq.criteria = Object.fromEntries(keys.map((k, i) => [k, String(q.criteria[i])]));
+      maps[name] = { keys, opts: q.criteria.map(String) };
+    }
+    questions[name] = nq;
+  }
+  let model = String(body.model || "");
+  if (cloud) model = model.replace(/[:\-]cloud$/i, "");
+  return { req: { ...body, model, questions }, maps };
+}
+function fromOllama(a, m) {
+  if (!a || typeof a !== "object") return a;
+  const out = { ...a };
+  if ("choice" in a && m) {
+    const i = typeof a.choice === "number" ? a.choice : m.keys.indexOf(String(a.choice));
+    if (i >= 0 && i < m.opts.length) out.choice = m.opts[i];
+    if (a.probabilities && !Array.isArray(a.probabilities)) out.probabilities = Object.fromEntries(m.keys.map((k, j) => [m.opts[j], +(a.probabilities[k] ?? 0)]));
+  }
+  if (typeof a.noul === "number") {
+    const p = Math.max(0, Math.min(1, a.noul));
+    out.noul = p >= 0.5;
+    out.p_true = p;
+    out.probabilities = { no: +(1 - p).toFixed(6), yes: +p.toFixed(6) };
+    if (out.confidence == null) out.confidence = +Math.max(p, 1 - p).toFixed(6);
+  }
+  return out;
+}
+var Decisions = class {
+  /**
+   * @param {{ server?: 'ollaya'|'ollama'|'cloud', host?: string, apiKey?: string, model?: string, kit?: object }} o
+   * host: the server's address (Ollaya default http://localhost:11435; Ollama: the kit's local Ollama). apiKey: Ollaya's
+   * key, or for the cloud a key other than the kit's Ollama Cloud key.
+   */
+  constructor({ server = "ollaya", host = "", apiKey = "", model = "", kit = null } = {}) {
+    Object.assign(this, { server, host, apiKey, model, kit });
+  }
+  get name() {
+    return NAMES[this.server] || this.server;
+  }
+  get base() {
+    if (this.server === "cloud") return OLLAMA_CLOUD;
+    if (this.server === "ollama") return String(this.host || this.kit?.local?.host || OLLAMA_LOCAL).replace(/\/+$/, "");
+    return String(this.host || OLLAYA_LOCAL).replace(/\/+$/, "");
+  }
+  get key() {
+    return this.server === "cloud" ? this.apiKey || this.kit?.ollama?.apiKey || "" : this.apiKey;
+  }
+  get headers() {
+    const h = { "Content-Type": "application/json" };
+    if (this.key) h.Authorization = "Bearer " + this.key;
+    return h;
+  }
+  async _fetch(path, init = {}) {
+    if (!["ollaya", "ollama", "cloud"].includes(this.server)) throw new Error(`unknown decision server "${this.server}": use ollaya, ollama or cloud`);
+    if (this.server === "cloud" && !this.key) throw new Error("no Ollama Cloud API key for decisions: createKit({ ollamaKey }) or kit.decisions.apiKey = \u2026");
+    try {
+      return await fetch(this.base + path, { ...init, headers: this.headers });
+    } catch (e) {
+      if (e?.name === "AbortError") throw e;
+      if (this.server === "cloud") throw new Error(`could not reach Ollama Cloud (${e.message})`);
+      const n = this.server;
+      throw new Error(`could not reach ${this.name} at ${this.base}. Is "${n} serve" running? If it is, the browser blocked the request: start it with ${n.toUpperCase()}_ORIGINS set to this page's origin (or "*").`);
+    }
+  }
+  async _err(r, model) {
+    let m = `HTTP ${r.status}`;
+    try {
+      const j = await r.json();
+      m = (j.error || m) + (j.detail ? " \u2014 " + JSON.stringify(j.detail).slice(0, 300) : "");
+    } catch {
+    }
+    if (r.status === 401) m += this.server === "cloud" ? " (the Ollama Cloud API key was rejected)" : this.server === "ollaya" ? " (the API key was rejected: OLLAYA_API_KEY)" : " (the request was refused)";
+    else if (r.status === 402) m += " (cloud decision models need a paid Ollama plan or usage credits)";
+    else if (r.status === 403) m += ` (${this.name} refused this page's origin: set ${this.server.toUpperCase()}_ORIGINS)`;
+    else if (r.status === 404) m += this.server === "cloud" ? ` (Ollama Cloud has no decision model "${model}"; try clef)` : this.server === "ollama" ? " (decision models need Ollama 0.35 or newer, and the model pulled: ollama pull clef-flash)" : ` (pull the model: ollaya pull ${model || "<model>"})`;
+    return new Error(`${this.name} said ${r.status}: ${m}`);
+  }
+  /** the decision models the server offers (on Ollama and Ollama Cloud, only decision models, not chat models) */
+  async models() {
+    const r = await this._fetch("/api/tags");
+    if (!r.ok) throw await this._err(r);
+    const ms = ((await r.json()).models || []).map((m) => ({ name: m.name || m.model, caps: m.capabilities || m.details?.capabilities })).filter((m) => m.name);
+    if (this.server === "ollaya") return ms.map((m) => m.name);
+    let names = ms.filter((m) => Array.isArray(m.caps) && m.caps.includes("decision") || DECIDERS.test(m.name)).map((m) => m.name);
+    if (this.server === "cloud") {
+      names = names.map((n) => n.replace(/[:\-]cloud$/i, ""));
+      if (!names.includes("clef")) names.unshift("clef");
+    }
+    return [...new Set(names)];
+  }
+  /** the raw System One call (Ollaya's request shape in, Ollaya's answer shape out) */
+  async systemone(body, { signal } = {}) {
+    const ollama = this.server !== "ollaya";
+    let req = body, maps = {};
+    if (ollama) ({ req, maps } = toOllama(body, this.server === "cloud"));
+    const r = await this._fetch("/v1/systemone", { method: "POST", body: JSON.stringify(req), signal });
+    if (!r.ok) throw await this._err(r, req.model);
+    const j = await r.json();
+    if (!ollama) return j;
+    return { ...j, answers: Object.fromEntries(Object.entries(j.answers || {}).map(([k, a]) => [k, fromOllama(a, maps[k])])) };
+  }
+  /**
+   * Decide one question about a state.
+   * @param {{ state: any, question: string, type?: 'choice'|'score'|'yesno', options?: string[]|string, model?: string, signal?: AbortSignal }} o
+   *   choice: pick one of options (2-255) · score: options are 2-10 levels, lowest first · yesno: no options
+   * @returns {Promise<{ type, result, choice?, score?, legend?, answer?, confidence: number|null, probabilities: object, model: string, server: string }>}
+   */
+  async decide({ state = "", question = "", type = "choice", options, model, signal } = {}) {
+    model ||= this.model || (this.server === "cloud" ? "clef" : "");
+    if (!model) throw new Error(`no decision model: kit.decisions.model = '\u2026' (list them with kit.decisions.models())`);
+    const t = type === "yesno" ? "noul" : type;
+    const q = { type: t, instructions: String(question || "") };
+    const opts = (Array.isArray(options) ? options : typeof options === "string" ? options.split("\n") : []).map(String).map((x) => x.trim()).filter(Boolean);
+    if (t === "choice") {
+      if (opts.length < 2) throw new Error('type "choice" needs at least 2 options');
+      q.criteria = opts.slice(0, 255);
+    } else if (t === "score") {
+      if (opts.length < 2) throw new Error('type "score" needs 2-10 level descriptions, lowest first');
+      q.criteria = opts.slice(0, 10);
+    } else if (t !== "noul") throw new Error("type must be choice, score or yesno");
+    const j = await this.systemone({ model, state: typeof state === "string" ? state : JSON.stringify(state ?? ""), questions: { q } }, { signal });
+    const a = j.answers?.q;
+    if (!a) throw new Error(`${this.name} returned no answer`);
+    const probabilities = Array.isArray(a.probabilities) ? Object.fromEntries(a.probabilities.map((v, i) => [String(i), +v])) : Object.fromEntries(Object.entries(a.probabilities || {}).map(([k, v]) => [k, +v]));
+    const out = { type: type === "yesno" ? "yesno" : t, confidence: a.confidence != null ? +a.confidence : null, probabilities, model: j.model || model, server: this.server };
+    if ("choice" in a) {
+      out.choice = a.choice;
+      out.result = a.choice;
+    }
+    if ("score" in a) {
+      out.score = a.score;
+      out.result = a.score;
+      if (a.legend != null) out.legend = a.legend;
+    }
+    if ("noul" in a) {
+      out.answer = a.noul;
+      out.result = a.noul;
+    }
+    return out;
+  }
+};
+
 // src/tools.js
 var MAX_OUT = 3e4;
 var READ_LINES = 2e3;
@@ -4779,6 +4935,18 @@ ${String(x.content || "").trim()}`).join("\n\n") : "no results");
         return clip(`# ${r.title || url}
 
 ${r.content || ""}${r.links?.length ? "\n\nLinks:\n" + r.links.slice(0, 50).join("\n") : ""}`);
+      }
+    },
+    decide: {
+      description: "Ask a decision model to judge something with calibrated probabilities: pick one option (choice), rate on levels (score), or answer yes/no (yesno). Fast and cheap; use it for triage, routing and checks.",
+      parameters: obj({ state: { ...str, description: "what to judge: a message, log, diff, error or JSON" }, question: { ...str, description: "what to decide, as an instruction" }, type: { type: "string", enum: ["choice", "score", "yesno"] }, options: { type: "array", items: str, description: "choice: the options; score: 2-10 levels, lowest first; yesno: none" } }, ["state", "question"]),
+      async run(a, ctx) {
+        const d = await kit.decide({ ...a, signal: ctx?.signal });
+        const probs = Object.entries(d.probabilities).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${k} ${v.toFixed(3)}`).join(", ");
+        const head = d.type === "score" ? `score: ${d.score}${d.legend != null ? ` (${typeof d.legend === "string" ? d.legend : JSON.stringify(d.legend).slice(0, 200)})` : ""}` : d.type === "yesno" ? `answer: ${d.answer ? "yes" : "no"}` : `choice: ${d.choice}`;
+        return `${head}${d.confidence != null ? ` | confidence ${d.confidence.toFixed(3)}` : ""}${probs ? `
+probabilities: ${probs}` : ""}
+model: ${d.model} (${kit.decisions.name})`;
       }
     }
   };
@@ -4927,7 +5095,7 @@ var Agent = class {
 
 // src/index.js
 var VERSION = "0.1.0";
-async function createKit({ persist = false, files = null, ollamaKey = "", ollamaHost = OLLAMA_LOCAL, assetsBase = null, cdn = "https://cdn.jsdelivr.net/npm/", engine = "auto", busybox: bbNow = true } = {}) {
+async function createKit({ persist = false, files = null, ollamaKey = "", ollamaHost = OLLAMA_LOCAL, decide = {}, assetsBase = null, cdn = "https://cdn.jsdelivr.net/npm/", engine = "auto", busybox: bbNow = true } = {}) {
   if (assetsBase) setAssetsBase(assetsBase);
   const vfs = new VFS({ persist });
   const loaded = await vfs.load().catch(() => false);
@@ -4947,11 +5115,14 @@ async function createKit({ persist = false, files = null, ollamaKey = "", ollama
   kit.webxdc = new Webxdc({ vfs, persist });
   kit.embed = (input, o) => local.embed(input, o);
   kit.vectors = createVectors(kit);
+  kit.decisions = new Decisions({ ...decide, kit });
+  kit.decide = (o) => kit.decisions.decide(o);
   kit.tools = createTools(kit);
   kit.agent = (o = {}) => new Agent({ kit, ...o });
   async function bridge(op, a) {
     if (op === "tool") return kit.tools.call(a.name, a.args || {});
     if (op === "list") return kit.tools.names();
+    if (op === "decide") return kit.decide(a);
     if (op === "shell") {
       const r = await kit.shell.session().run(a.command);
       return { stdout: r.stdout, stderr: r.stderr, code: r.code };
@@ -4967,10 +5138,12 @@ export {
   BusyBox,
   DEFAULT_TOOLS,
   Database,
+  Decisions,
   JsRunner,
   ML,
   OLLAMA_CLOUD,
   OLLAMA_LOCAL,
+  OLLAYA_LOCAL,
   Ollama,
   OllamaCloud,
   Python,
