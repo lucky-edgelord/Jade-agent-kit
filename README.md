@@ -10,6 +10,7 @@ A browser workspace for AI agents, loaded from a CDN with one import. It gives a
 - **TensorFlow.js**, **ONNX Runtime Web** and **LiteRT** (`.tflite`), on WebGPU when the device has it
 - a **webxdc** host for running `.xdc` apps in a sandboxed frame
 - **LLM tool definitions** (OpenAI/Ollama and Anthropic shapes) with one dispatcher
+- **decisions** with decision models on **Ollaya**, **Ollama** (0.35+) or **Ollama Cloud**: pick one, score, yes/no, with calibrated probabilities
 - **embeddings** from Ollama on your machine, and a **vector store** on sqlite-vec (semantic and hybrid search)
 - a small **pi-style agent** on **Ollama Cloud** or **Ollama on your machine**, with six tools: `read`, `write`, `edit`, `bash`, `search`, `fetch`
 
@@ -56,6 +57,7 @@ const kit = await createKit({
   files: { '/a.txt': 'hi' },    // added when the workspace is empty
   ollamaKey: '…',               // Ollama Cloud: the agent on the cloud, web search and fetch
   ollamaHost: 'http://localhost:11434',   // Ollama on a machine: the agent and embeddings (this is the default)
+  decide: { server: 'ollaya', model: 'winnow:e4b' },   // decision models: 'ollaya' | 'ollama' | 'cloud'
 });
 ```
 
@@ -159,6 +161,34 @@ kit.webxdc.updates(app); s.close(); kit.webxdc.pack(app);      // → .xdc bytes
 
 Apps run in an `iframe sandbox="allow-scripts …"` (no same-origin access, no network); their updates persist with the kit.
 
+### Decisions: `kit.decide`, `kit.decisions`
+
+Decision models (System One, `POST /v1/systemone`) judge a state against a question and answer with calibrated
+probabilities. They are fast and cheap, good for triage, routing and checks.
+
+```js
+kit.decisions.server = 'ollaya';            // 'ollaya' (default http://localhost:11435) | 'ollama' (0.35+) | 'cloud'
+kit.decisions.model = 'winnow:e4b';         // the cloud defaults to clef
+await kit.decisions.models();               // what the server offers (Ollama: decision models only)
+
+await kit.decide({ state: 'TypeError at list.js:42', question: 'What kind of problem?', options: ['bug', 'network', 'user input'] });
+// → { type: 'choice', result: 'bug', choice: 'bug', confidence: 0.91, probabilities: { bug: 0.91, … }, model, server }
+await kit.decide({ state: log, question: 'How urgent?', type: 'score', options: ['low', 'medium', 'high'] });   // → score, legend
+await kit.decide({ state: msg, question: 'Is this spam?', type: 'yesno' });                                    // → answer: true/false
+```
+
+The servers speak different formats, and the kit translates both ways so the answer looks the same:
+
+| | Ollaya | Ollama (local, 0.35+) | Ollama Cloud |
+| --- | --- | --- | --- |
+| Address | `decisions.host`, default `http://localhost:11435` | `decisions.host`, else the kit's local Ollama | `https://ollama.com` |
+| Key | optional (`decisions.apiKey`) | none | the kit's Ollama Cloud key (or `decisions.apiKey`) |
+| Options sent as | a list | an object `{ key: description }` | an object |
+| Yes/no answer | a boolean | the probability of true (turned into yes/no + probabilities) | the same as Ollama |
+| Models | any it has | decision models such as `clef-flash` (`ollama pull`) | `clef` (paid plan or credits); `clef:cloud` is sent as `clef` |
+
+Scripts call `await kit.decide({ … })` too, and agents get a `decide` tool (`kit.agent({ tools: [...DEFAULT_TOOLS, 'decide'] })`).
+
 ### Embeddings and vector search: `kit.embed`, `kit.vectors`
 
 Embeddings come from Ollama on your machine (`ollama pull embeddinggemma`, or any embedding model:
@@ -195,6 +225,7 @@ kit.tools.add('now', { description: 'the time', parameters: { type: 'object', pr
 | `python`, `javascript` | run code |
 | `sqlite` | SQL on a database file, rows as JSON |
 | `search_files` | BM25 over the files under a folder |
+| `decide` | a decision model: choice, score or yes/no with probabilities |
 | `search`, `fetch` | Ollama Cloud web search and web fetch (need an Ollama Cloud key) |
 
 ### The agent: `kit.agent()`
@@ -232,8 +263,8 @@ agent runs locally. Options: `system` (prompt), `tools` (names, default the six 
   isolated in a sandboxed frame. Treat the kit as a workspace, not a security boundary against hostile code.
 - **API keys**: an Ollama Cloud key used in a browser is visible to whoever uses that page. Use it in your own
   tools, or put a small proxy in front of `https://ollama.com` and set `kit.ollama.host` to it.
-- **Ollama on your machine**: a web page may only call it when Ollama allows the page's origin. Start it with
-  `OLLAMA_ORIGINS="https://your.site" ollama serve` (or `"*"`). Chrome may also ask the user to allow local network
+- **Ollama and Ollaya on your machine**: a web page may only call them when they allow the page's origin. Start them
+  with `OLLAMA_ORIGINS="https://your.site" ollama serve` / `OLLAYA_ORIGINS=… ollaya serve` (or `"*"`). Chrome may also ask the user to allow local network
   access the first time.
 - **Big files**: files over 16 MB are not copied into BusyBox commands, over 4 MB into Python and over 2 MB into JS
   scripts (SQLite databases excepted).

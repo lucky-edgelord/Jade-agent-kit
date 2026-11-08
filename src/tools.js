@@ -85,6 +85,16 @@ export function createTools(kit) {
       parameters: obj({ url: str }, ['url']),
       async run({ url }, ctx) { const r = await kit.ollama.webFetch(url, { signal: ctx?.signal }); return clip(`# ${r.title || url}\n\n${r.content || ''}${r.links?.length ? '\n\nLinks:\n' + r.links.slice(0, 50).join('\n') : ''}`); },
     },
+    decide: {
+      description: 'Ask a decision model to judge something with calibrated probabilities: pick one option (choice), rate on levels (score), or answer yes/no (yesno). Fast and cheap; use it for triage, routing and checks.',
+      parameters: obj({ state: { ...str, description: 'what to judge: a message, log, diff, error or JSON' }, question: { ...str, description: 'what to decide, as an instruction' }, type: { type: 'string', enum: ['choice', 'score', 'yesno'] }, options: { type: 'array', items: str, description: 'choice: the options; score: 2-10 levels, lowest first; yesno: none' } }, ['state', 'question']),
+      async run(a, ctx) {
+        const d = await kit.decide({ ...a, signal: ctx?.signal });
+        const probs = Object.entries(d.probabilities).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${k} ${v.toFixed(3)}`).join(', ');
+        const head = d.type === 'score' ? `score: ${d.score}${d.legend != null ? ` (${typeof d.legend === 'string' ? d.legend : JSON.stringify(d.legend).slice(0, 200)})` : ''}` : d.type === 'yesno' ? `answer: ${d.answer ? 'yes' : 'no'}` : `choice: ${d.choice}`;
+        return `${head}${d.confidence != null ? ` | confidence ${d.confidence.toFixed(3)}` : ''}${probs ? `\nprobabilities: ${probs}` : ''}\nmodel: ${d.model} (${kit.decisions.name})`;
+      },
+    },
   };
   T.web_search = T.search; T.web_fetch = T.fetch;
   const names = n => (n || Object.keys(T).filter(k => !k.startsWith('web_'))).filter(k => T[k]);
