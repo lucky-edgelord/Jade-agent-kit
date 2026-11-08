@@ -1940,8 +1940,10 @@ Modify: ${new Date(s.mtime).toISOString()}
 // src/shell.js
 var ShellSession = class {
   /** @param {object} env from createShellEnv; @param {{ cwd?: string, env?: object, timeoutMs?: number }} opts */
-  constructor(core, { cwd = "/", env = {}, timeoutMs = 6e4 } = {}) {
+  constructor(core, { cwd = "/", env = {}, timeoutMs = 6e4 } = {}, busybox = null, engine = () => "auto") {
     this.core = core;
+    this.bb = busybox;
+    this.engine = engine;
     this.sh = new core.Shell({ cwd, env });
     this.sh.timeoutMs = timeoutMs;
   }
@@ -1959,6 +1961,7 @@ var ShellSession = class {
    * @param {string} command @param {{ stdin?: string, timeoutMs?: number, onOutput?: (text: string, isErr: boolean) => void, signal?: AbortSignal }} [o]
    */
   async run(command, { stdin = "", timeoutMs, onOutput, signal } = {}) {
+    if (this.bb && !this.bb.ready && this.engine() !== "js") await this.bb.load();
     const sh = this.sh;
     if (timeoutMs) sh.timeoutMs = timeoutMs;
     sh.onOutput = onOutput || null;
@@ -1984,7 +1987,7 @@ function createShell({ vfs, busybox, engine = "auto", commands = {} }) {
     core,
     commands,
     /** a shell with its own working directory and variables */
-    session: (o) => new ShellSession(core, o),
+    session: (o) => new ShellSession(core, o, busybox, () => env.engine),
     /** 'auto' (BusyBox when loaded, else JS), 'wasm' (BusyBox only) or 'js' (JS applets only) */
     get engine() {
       return env.engine;
