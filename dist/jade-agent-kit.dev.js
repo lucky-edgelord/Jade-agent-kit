@@ -1,4 +1,4 @@
-/*! Jade Agent Kit 0.1.0 | MIT | https://github.com/lucky-edgelord/jade-agent-kit | bundles code under its own licenses: see THIRD_PARTY_NOTICES.md */
+/*! Jade Agent Kit 0.1.0 | MIT | https://github.com/lucky-edgelord/Jade-agent-kit | bundles code under its own licenses: see THIRD_PARTY_NOTICES.md */
 
 // src/util.js
 var enc = new TextEncoder();
@@ -4426,11 +4426,18 @@ var Webxdc = class {
 
 // src/ollama.js
 var OLLAMA_CLOUD = "https://ollama.com";
-var OllamaCloud = class {
-  /** @param {{ apiKey?: string, host?: string }} o */
-  constructor({ apiKey = "", host = OLLAMA_CLOUD } = {}) {
+var OLLAMA_LOCAL = "http://localhost:11434";
+var Ollama = class {
+  /** @param {{ host?: string, apiKey?: string }} o */
+  constructor({ host = OLLAMA_LOCAL, apiKey = "" } = {}) {
+    this.host = String(host).replace(/\/+$/, "");
     this.apiKey = apiKey;
-    this.host = host.replace(/\/+$/, "");
+  }
+  get cloud() {
+    return /^https:\/\/(www\.)?ollama\.com$/i.test(this.host);
+  }
+  get name() {
+    return this.cloud ? "Ollama Cloud" : `Ollama at ${this.host}`;
   }
   get headers() {
     const h = { "Content-Type": "application/json" };
@@ -4444,27 +4451,51 @@ var OllamaCloud = class {
       m = j.error || m;
     } catch {
     }
-    if (r.status === 401) m = "the Ollama API key was rejected (401). Create one at https://ollama.com/settings/keys";
-    else if (r.status === 402 || r.status === 429) m += " (Ollama Cloud usage limit)";
-    return new Error(m);
+    if (r.status === 401) m = this.cloud ? "the Ollama API key was rejected (401). Create one at https://ollama.com/settings/keys" : `${this.name} refused the request (401)`;
+    else if (r.status === 404 && /model/i.test(m)) m += this.cloud ? "" : " (pull it first: ollama pull <model>)";
+    else if (r.status === 402 || r.status === 429) m += " (usage limit)";
+    return new Error(`${this.name}: ${m}`);
   }
-  async _post(path, body, signal) {
-    if (!this.apiKey) throw new Error("no Ollama API key: createKit({ ollamaKey }) or kit.ollama.apiKey = \u2026");
-    const r = await fetch(this.host + path, { method: "POST", headers: this.headers, body: JSON.stringify(body), signal });
+  async _fetch(path, init = {}) {
+    if (this.cloud && !this.apiKey) throw new Error("no Ollama Cloud API key: createKit({ ollamaKey }) or kit.ollama.apiKey = \u2026");
+    let r;
+    try {
+      r = await fetch(this.host + path, { ...init, headers: { ...this.headers, ...init.headers || {} } });
+    } catch (e) {
+      if (e?.name === "AbortError") throw e;
+      throw new Error(this.cloud ? `could not reach Ollama Cloud (${e.message})` : `could not reach ${this.name}. Is "ollama serve" running? If it is, the browser blocked the request: start it with OLLAMA_ORIGINS set to this page's origin (or "*").`);
+    }
     if (!r.ok) throw await this._err(r);
     return r;
   }
-  /** the models this key can use */
+  _post(path, body, signal) {
+    return this._fetch(path, { method: "POST", body: JSON.stringify(body), signal });
+  }
+  /** the models available here */
   async models() {
-    const r = await fetch(this.host + "/api/tags", { headers: this.headers });
-    if (!r.ok) throw await this._err(r);
+    const r = await this._fetch("/api/tags");
     return ((await r.json()).models || []).map((m) => m.name || m.model).filter(Boolean);
   }
-  /** POST /api/web_search → { results: [{ title, url, content }] } */
+  /**
+   * Embeddings: POST /api/embed. Returns one vector per input (L2-normalized by Ollama).
+   * @param {string|string[]} input @param {{ model?: string, dimensions?: number, truncate?: boolean, signal?: AbortSignal }} [o]
+   */
+  async embed(input, { model = "embeddinggemma", dimensions, truncate = true, signal } = {}) {
+    const one = !Array.isArray(input);
+    const list = (one ? [input] : input).map(String);
+    if (!list.length) return [];
+    const out = [];
+    for (let i = 0; i < list.length; i += 64) {
+      const r = await this._post("/api/embed", { model, input: list.slice(i, i + 64), truncate, ...dimensions ? { dimensions } : {} }, signal);
+      out.push(...(await r.json()).embeddings || []);
+    }
+    return one ? out[0] : out;
+  }
+  /** Ollama Cloud web search: { results: [{ title, url, content }] } */
   async webSearch(query, { maxResults = 5, signal } = {}) {
     return (await this._post("/api/web_search", { query: String(query), max_results: Math.max(1, Math.min(10, +maxResults || 5)) }, signal)).json();
   }
-  /** POST /api/web_fetch → { title, content, links } */
+  /** Ollama Cloud web fetch: { title, content, links } */
   async webFetch(url, { signal } = {}) {
     return (await this._post("/api/web_fetch", { url: String(url) }, signal)).json();
   }
@@ -4487,17 +4518,135 @@ var OllamaCloud = class {
         buf = buf.slice(i + 1);
         if (!line) continue;
         const j = JSON.parse(line);
-        if (j.error) throw new Error(j.error);
+        if (j.error) throw new Error(`${this.name}: ${j.error}`);
         yield j;
       }
     }
     if (buf.trim()) {
       const j = JSON.parse(buf);
-      if (j.error) throw new Error(j.error);
+      if (j.error) throw new Error(`${this.name}: ${j.error}`);
       yield j;
     }
   }
 };
+var OllamaCloud = class extends Ollama {
+  constructor({ apiKey = "", host = OLLAMA_CLOUD } = {}) {
+    super({ host, apiKey });
+  }
+};
+
+// src/vectors.js
+var VectorStore = class {
+  constructor(db, embed, { model, table = "docs" }) {
+    this.db = db;
+    this.embedFn = embed;
+    this.model = model;
+    this.t = table.replace(/[^\w]/g, "_");
+    this.dims = null;
+  }
+  async init() {
+    const t = this.t, db = this.db;
+    db.exec(`create table if not exists ${t}(id text primary key, text text not null, meta text, model text, dims integer)`);
+    const row = db.get(`select dims, model from ${t} limit 1`);
+    if (row) {
+      this.dims = row.dims;
+      if (row.model && row.model !== this.model) throw new Error(`${t} was embedded with ${row.model}, not ${this.model}: open it with { model: '${row.model}' }`);
+    }
+    return this;
+  }
+  _vecTable(dims) {
+    if (this.dims && this.dims !== dims) throw new Error(`the embedding model returned ${dims} dimensions; this store has ${this.dims}`);
+    if (!this.dims) {
+      this.dims = dims;
+      this.db.exec(`create virtual table if not exists ${this.t}_vec using vec0(embedding float[${dims}] distance_metric=cosine)`);
+    }
+  }
+  /** add or replace documents: strings or { id?, text, meta? }; embeds the new texts */
+  async add(docs, { signal } = {}) {
+    docs = (Array.isArray(docs) ? docs : [docs]).map((d, i) => typeof d === "string" ? { text: d } : d).filter((d) => d && String(d.text ?? "").trim());
+    if (!docs.length) return [];
+    const vecs = await this.embedFn(docs.map((d) => String(d.text)), { model: this.model, signal });
+    this._vecTable(vecs[0].length);
+    const t = this.t;
+    const ids = [];
+    this.db.transaction((db) => {
+      for (const [i, d] of docs.entries()) {
+        const id = String(d.id ?? (crypto.randomUUID?.() || Date.now() + "-" + i));
+        const old = db.get(`select rowid from ${t} where id = ?`, [id]);
+        if (old) {
+          db.run(`delete from ${t}_vec where rowid = ?`, [old.rowid]);
+          db.run(`delete from ${t} where rowid = ?`, [old.rowid]);
+        }
+        const { lastInsertRowid } = db.run(`insert into ${t}(id, text, meta, model, dims) values (?, ?, ?, ?, ?)`, [id, String(d.text), d.meta == null ? null : JSON.stringify(d.meta), this.model, vecs[i].length]);
+        db.run(`insert into ${t}_vec(rowid, embedding) values (?, ?)`, [lastInsertRowid, JSON.stringify(vecs[i])]);
+        ids.push(id);
+      }
+    });
+    return ids;
+  }
+  /**
+   * Nearest documents to a query. hybrid: also rank by BM25 keywords and merge (reciprocal rank fusion).
+   * @returns {Promise<Array<{ id, text, meta, distance, score }>>}
+   */
+  async search(query, { limit = 5, hybrid = false, signal } = {}) {
+    if (!this.dims) return [];
+    const [qv] = await this.embedFn([String(query)], { model: this.model, signal });
+    const t = this.t;
+    const k = hybrid ? Math.max(limit * 4, 20) : limit;
+    const near = this.db.query(`select d.id, d.text, d.meta, v.distance from ${t}_vec v join ${t} d on d.rowid = v.rowid where v.embedding match ? and k = ? order by v.distance`, [JSON.stringify(qv), k]).map((r) => ({ id: r.id, text: r.text, meta: r.meta ? JSON.parse(r.meta) : null, distance: r.distance, score: 1 - r.distance }));
+    if (!hybrid) return near.slice(0, limit);
+    const all = this.db.query(`select id, text, meta from ${t}`);
+    const kw = new BM25(all.map((r) => ({ id: r.id, text: r.text }))).search(query, { limit: k });
+    const fused = /* @__PURE__ */ new Map();
+    const add = (list, w) => list.forEach((r, i) => {
+      const f = fused.get(r.id) || { ...r, score: 0 };
+      f.score += w / (60 + i + 1);
+      fused.set(r.id, f);
+    });
+    add(near, 1);
+    add(kw.map((r) => {
+      const n = near.find((x) => x.id === r.id);
+      const row = all.find((x) => x.id === r.id);
+      return n || { id: r.id, text: row.text, meta: row.meta ? JSON.parse(row.meta) : null, distance: null };
+    }), 1);
+    return [...fused.values()].sort((a, b) => b.score - a.score).slice(0, limit);
+  }
+  remove(ids) {
+    const t = this.t;
+    this.db.transaction((db) => {
+      for (const id of [].concat(ids)) {
+        const r = db.get(`select rowid from ${t} where id = ?`, [String(id)]);
+        if (r) {
+          db.run(`delete from ${t}_vec where rowid = ?`, [r.rowid]);
+          db.run(`delete from ${t} where rowid = ?`, [r.rowid]);
+        }
+      }
+    });
+  }
+  count() {
+    return this.db.get(`select count(*) n from ${this.t}`).n;
+  }
+  save() {
+    return this.db.save();
+  }
+  close() {
+    this.db.close();
+  }
+};
+function createVectors(kit) {
+  return {
+    /**
+     * Open (or create) a vector store in a SQLite file.
+     * @param {string} path a VFS path or ':memory:'
+     * @param {{ model?: string, table?: string, ollama?: import('./ollama.js').Ollama }} [o] model: an Ollama embedding model (default embeddinggemma)
+     */
+    async open(path = ":memory:", { model = "embeddinggemma", table = "docs", ollama = null } = {}) {
+      const db = await kit.sqlite.open(path);
+      const client = ollama || kit.local;
+      return new VectorStore(db, (texts, o) => client.embed(texts, o), { model, table }).init();
+    }
+  };
+}
 
 // src/tools.js
 var MAX_OUT = 3e4;
@@ -4679,12 +4828,15 @@ Tools:
 Work step by step. Prefer edit over rewriting whole files. Check your work (run it, read it back). Be concise in your final answer.`;
 var Agent = class {
   /**
-   * @param {{ kit: object, model?: string, system?: string, tools?: string[], think?: boolean|'low'|'medium'|'high', maxSteps?: number,
+   * @param {{ kit: object, provider?: 'cloud'|'local', ollama?: object, model?: string, system?: string, tools?: string[], think?: boolean|'low'|'medium'|'high', maxSteps?: number,
    *           options?: object, onEvent?: (e: object) => void }} o
    * Events: { type: 'thinking'|'text', delta } · { type: 'tool_call', name, args } · { type: 'tool_result', name, result } ·
    *         { type: 'turn_end', message } · { type: 'done', text } · { type: 'error', error }
    */
-  constructor({ kit, model = "gpt-oss:120b", system = SYSTEM, tools = DEFAULT_TOOLS, think = void 0, maxSteps = 40, options = void 0, onEvent = null }) {
+  constructor({ kit, provider = null, ollama = null, model = null, system = SYSTEM, tools = DEFAULT_TOOLS, think = void 0, maxSteps = 40, options = void 0, onEvent = null }) {
+    provider ||= kit.ollama.apiKey ? "cloud" : "local";
+    this.client = ollama || (provider === "cloud" ? kit.ollama : kit.local);
+    model ||= this.client.cloud ? "gpt-oss:120b" : "qwen3:8b";
     Object.assign(this, { kit, model, system, toolNames: tools, think, maxSteps, options, onEvent });
     this.messages = [];
     this.ctrl = null;
@@ -4717,7 +4869,7 @@ var Agent = class {
         const msg = { role: "assistant", content: "" };
         let thinking = "";
         const calls = [];
-        for await (const ch of this.kit.ollama.chat({ model: this.model, messages: [{ role: "system", content: this.system }, ...this.messages], tools, ...this.think !== void 0 ? { think: this.think } : {}, ...this.options ? { options: this.options } : {}, signal })) {
+        for await (const ch of this.client.chat({ model: this.model, messages: [{ role: "system", content: this.system }, ...this.messages], tools, ...this.think !== void 0 ? { think: this.think } : {}, ...this.options ? { options: this.options } : {}, signal })) {
           const m = ch.message || {};
           if (m.thinking) {
             thinking += m.thinking;
@@ -4772,7 +4924,7 @@ var Agent = class {
 
 // src/index.js
 var VERSION = "0.1.0";
-async function createKit({ persist = false, files = null, ollamaKey = "", assetsBase = null, cdn = "https://cdn.jsdelivr.net/npm/", engine = "auto", busybox: bbNow = true } = {}) {
+async function createKit({ persist = false, files = null, ollamaKey = "", ollamaHost = OLLAMA_LOCAL, assetsBase = null, cdn = "https://cdn.jsdelivr.net/npm/", engine = "auto", busybox: bbNow = true } = {}) {
   if (assetsBase) setAssetsBase(assetsBase);
   const vfs = new VFS({ persist });
   const loaded = await vfs.load().catch(() => false);
@@ -4781,14 +4933,17 @@ async function createKit({ persist = false, files = null, ollamaKey = "", assets
   const sqlite = new Sqlite(vfs);
   const ml = new ML({ vfs, cdn });
   const python = new Python({ vfs, sqlite, cdn });
-  const ollama = new OllamaCloud({ apiKey: ollamaKey });
-  const kit = { version: VERSION, vfs, busybox, sqlite, ml, python, ollama, bm25: { BM25, search: bm25Search, tokenize, searchFiles: (q, o) => searchFiles(vfs, q, o) } };
+  const ollama = new Ollama({ host: OLLAMA_CLOUD, apiKey: ollamaKey });
+  const local = new Ollama({ host: ollamaHost });
+  const kit = { version: VERSION, vfs, busybox, sqlite, ml, python, ollama, local, bm25: { BM25, search: bm25Search, tokenize, searchFiles: (q, o) => searchFiles(vfs, q, o) } };
   kit.js = new JsRunner({ vfs, sqlite, ml, bridge: (op, a) => bridge(op, a) });
   const commands = { node: kit.js.command(), js: kit.js.command(), python: python.command(), python3: python.command(), sqlite3: sqlite.command() };
   kit.shell = createShell({ vfs, busybox, engine, commands });
   kit.sh = kit.shell.session();
   kit.run = (cmd, o) => kit.sh.run(cmd, o);
   kit.webxdc = new Webxdc({ vfs, persist });
+  kit.embed = (input, o) => local.embed(input, o);
+  kit.vectors = createVectors(kit);
   kit.tools = createTools(kit);
   kit.agent = (o = {}) => new Agent({ kit, ...o });
   async function bridge(op, a) {
@@ -4811,12 +4966,16 @@ export {
   Database,
   JsRunner,
   ML,
+  OLLAMA_CLOUD,
+  OLLAMA_LOCAL,
+  Ollama,
   OllamaCloud,
   Python,
   ShellSession,
   Sqlite,
   VERSION,
   VFS,
+  VectorStore,
   Webxdc,
   bm25Search,
   createKit,
