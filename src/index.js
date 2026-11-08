@@ -13,6 +13,8 @@ import { Webxdc } from './webxdc.js';
 import { Ollama, OllamaCloud, OLLAMA_CLOUD, OLLAMA_LOCAL } from './ollama.js';
 import { createVectors, VectorStore } from './vectors.js';
 import { Decisions, OLLAYA_LOCAL } from './decide.js';
+import { Tasks } from './tasks.js';
+import { Scheduler, Cron } from './schedule.js';
 import { createTools } from './tools.js';
 import { Agent, DEFAULT_TOOLS } from './agent.js';
 import { setAssetsBase, getAssetsBase } from './util.js';
@@ -30,9 +32,10 @@ export const VERSION = '0.1.0';
  *   decide: decision models: { server: 'ollaya'|'ollama'|'cloud', model, host?, apiKey? } (default Ollaya at http://localhost:11435)
  *   assetsBase: where the kit's own files (assets/) are, if you host them yourself
  *   cdn: npm CDN for the runtimes loaded on demand (default https://cdn.jsdelivr.net/npm/)
+ *   scheduler: run scheduled jobs while the page is open (default true)
  *   busybox: start BusyBox right away (default true; the shell uses JS commands until it is ready)
  */
-export async function createKit({ persist = false, files = null, ollamaKey = '', ollamaHost = OLLAMA_LOCAL, decide = {}, assetsBase = null, cdn = 'https://cdn.jsdelivr.net/npm/', engine = 'auto', busybox: bbNow = true } = {}) {
+export async function createKit({ persist = false, files = null, ollamaKey = '', ollamaHost = OLLAMA_LOCAL, decide = {}, assetsBase = null, cdn = 'https://cdn.jsdelivr.net/npm/', engine = 'auto', scheduler = true, busybox: bbNow = true } = {}) {
   if (assetsBase) setAssetsBase(assetsBase);
   const vfs = new VFS({ persist });
   const loaded = await vfs.load().catch(() => false);
@@ -58,6 +61,12 @@ export async function createKit({ persist = false, files = null, ollamaKey = '',
   kit.decisions = new Decisions({ ...decide, kit });
   /** decide({ state, question, type: 'choice'|'score'|'yesno', options }) → { result, confidence, probabilities, … } */
   kit.decide = o => kit.decisions.decide(o);
+  /** cron: parse, next, upcoming, describe, fromText ("every weekday at 8:30" → { cron } or { once }) */
+  kit.cron = Cron;
+  /** a task list, kept in the VFS (/.kit/tasks.json) */
+  kit.tasks = new Tasks(vfs);
+  /** scheduled jobs (shell, js, python, agent prompt or a function), kept in the VFS (/.kit/schedule.json) */
+  kit.schedule = new Scheduler(kit);
   kit.tools = createTools(kit);
   /** a pi-style agent on Ollama Cloud or a local Ollama (read, write, edit, bash, search, fetch) */
   kit.agent = (o = {}) => new Agent({ kit, ...o });
@@ -70,7 +79,8 @@ export async function createKit({ persist = false, files = null, ollamaKey = '',
     throw new Error(`kit.${op} is not available in Jade Agent Kit`);
   }
   if (bbNow) busybox.load();
+  if (scheduler) kit.schedule.start();
   return kit;
 }
 
-export { VFS, BusyBox, ShellSession, JsRunner, Python, Sqlite, Database, BM25, bm25Search, tokenize, searchFiles, ML, gpuShim, Webxdc, Ollama, OllamaCloud, OLLAMA_CLOUD, OLLAMA_LOCAL, VectorStore, Decisions, OLLAYA_LOCAL, Agent, DEFAULT_TOOLS, createTools, setAssetsBase, getAssetsBase };
+export { VFS, BusyBox, ShellSession, JsRunner, Python, Sqlite, Database, BM25, bm25Search, tokenize, searchFiles, ML, gpuShim, Webxdc, Ollama, OllamaCloud, OLLAMA_CLOUD, OLLAMA_LOCAL, VectorStore, Decisions, Tasks, Scheduler, Cron, OLLAYA_LOCAL, Agent, DEFAULT_TOOLS, createTools, setAssetsBase, getAssetsBase };

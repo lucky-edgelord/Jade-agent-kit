@@ -3,6 +3,7 @@
 //   kit.tools.anthropic(names?) → [{ name, description, input_schema }]
 //   kit.tools.call(name, args)  → Promise<string>
 import { searchFiles } from './bm25.js';
+import { Cron } from './internal/cron_core.js';
 
 const MAX_OUT = 30000;          // characters of tool output handed back to a model
 const READ_LINES = 2000;
@@ -93,6 +94,30 @@ export function createTools(kit) {
         const probs = Object.entries(d.probabilities).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${k} ${v.toFixed(3)}`).join(', ');
         const head = d.type === 'score' ? `score: ${d.score}${d.legend != null ? ` (${typeof d.legend === 'string' ? d.legend : JSON.stringify(d.legend).slice(0, 200)})` : ''}` : d.type === 'yesno' ? `answer: ${d.answer ? 'yes' : 'no'}` : `choice: ${d.choice}`;
         return `${head}${d.confidence != null ? ` | confidence ${d.confidence.toFixed(3)}` : ''}${probs ? `\nprobabilities: ${probs}` : ''}\nmodel: ${d.model} (${kit.decisions.name})`;
+      },
+    },
+    tasks: {
+      description: 'Your task list for multi-step work: add tasks when you plan, mark one in_progress while you work on it and done when it is finished. Actions: add (title, or titles for several), update (id, status, title, notes), list, remove (id), clear (removes done tasks).',
+      parameters: obj({ action: { type: 'string', enum: ['add', 'update', 'list', 'remove', 'clear'] }, title: str, titles: { type: 'array', items: str }, id: int, status: { type: 'string', enum: ['pending', 'in_progress', 'done'] }, notes: str }, ['action']),
+      run(a) {
+        const t = kit.tasks;
+        if (a.action === 'add') { const r = t.add(a.titles?.length ? a.titles : { title: a.title, notes: a.notes }); return `Added ${[].concat(r).map(x => '#' + x.id).join(', ')}\n\n${t.text()}`; }
+        if (a.action === 'update') { const r = t.update(a.id, { status: a.status, title: a.title, notes: a.notes }); return `#${r.id} is ${r.status}\n\n${t.text()}`; }
+        if (a.action === 'remove') { t.remove(a.id); return `Removed #${a.id}\n\n${t.text()}`; }
+        if (a.action === 'clear') { const n = t.clear(); return `Removed ${n} done task${n === 1 ? '' : 's'}\n\n${t.text()}`; }
+        return t.text();
+      },
+    },
+    schedule: {
+      description: 'Schedule work to run later or repeatedly while the page is open: a shell command, JavaScript, Python, or a prompt for an agent. "when" is plain English ("every day at 9am", "weekdays at 8:30", "every 30 minutes", "in 20 minutes", "tomorrow at 7pm") or 5-field cron. Actions: add, list, remove, enable, disable, run (now).',
+      parameters: obj({ action: { type: 'string', enum: ['add', 'list', 'remove', 'enable', 'disable', 'run'] }, name: str, when: str, command: { ...str, description: 'a shell command line' }, js: str, python: str, prompt: { ...str, description: 'a prompt for an agent' }, id: { ...str, description: 'job id or name' } }, ['action']),
+      async run(a) {
+        const s = kit.schedule; const fmt = j => `${j.id} ${j.name} · ${j.cron ? Cron.describe(j.cron) + ` (${j.cron})` : 'once'} · next ${j.next ? new Date(j.next).toLocaleString() : '—'}${j.enabled ? '' : ' · disabled'}${j.last ? ` · last ${j.last.error ? 'failed: ' + j.last.error : 'exit ' + j.last.code}` : ''}`;
+        if (a.action === 'add') { const j = s.add({ name: a.name, when: a.when, command: a.command, js: a.js, python: a.python, prompt: a.prompt }); return 'Scheduled ' + fmt(j) + (s.started ? '' : '\n(the scheduler is stopped: kit.schedule.start())'); }
+        if (a.action === 'remove') { s.remove(a.id ?? a.name); return 'Removed ' + (a.id ?? a.name); }
+        if (a.action === 'enable' || a.action === 'disable') return fmt(s.enable(a.id ?? a.name, a.action === 'enable'));
+        if (a.action === 'run') { const r = await s.runNow(a.id ?? a.name); return r.error ? `Error: ${r.error}` : (r.output?.trimEnd() || '(no output)') + (r.code ? `\n[exit code ${r.code}]` : ''); }
+        const l = s.list(); return l.length ? l.map(fmt).join('\n') : 'Nothing is scheduled.';
       },
     },
   };
