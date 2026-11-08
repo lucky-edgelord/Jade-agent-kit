@@ -1,4 +1,4 @@
-// A small coding agent in the style of pi: a model on Ollama Cloud, a loop, and six tools —
+// A small coding agent in the style of pi: a model on Ollama (Cloud, or on a machine), a loop, and six tools —
 // read, write, edit, bash (the kit's shell, with node / python / sqlite3), search and fetch (Ollama web search/fetch).
 export const DEFAULT_TOOLS = ['read', 'write', 'edit', 'bash', 'search', 'fetch'];
 
@@ -14,12 +14,16 @@ Work step by step. Prefer edit over rewriting whole files. Check your work (run 
 
 export class Agent {
   /**
-   * @param {{ kit: object, model?: string, system?: string, tools?: string[], think?: boolean|'low'|'medium'|'high', maxSteps?: number,
+   * @param {{ kit: object, provider?: 'cloud'|'local', ollama?: object, model?: string, system?: string, tools?: string[], think?: boolean|'low'|'medium'|'high', maxSteps?: number,
    *           options?: object, onEvent?: (e: object) => void }} o
    * Events: { type: 'thinking'|'text', delta } · { type: 'tool_call', name, args } · { type: 'tool_result', name, result } ·
    *         { type: 'turn_end', message } · { type: 'done', text } · { type: 'error', error }
    */
-  constructor({ kit, model = 'gpt-oss:120b', system = SYSTEM, tools = DEFAULT_TOOLS, think = undefined, maxSteps = 40, options = undefined, onEvent = null }) {
+  constructor({ kit, provider = null, ollama = null, model = null, system = SYSTEM, tools = DEFAULT_TOOLS, think = undefined, maxSteps = 40, options = undefined, onEvent = null }) {
+    // which Ollama: one you pass, or 'cloud' / 'local' (default: the cloud when the kit has a key, else the local one)
+    provider ||= kit.ollama.apiKey ? 'cloud' : 'local';
+    this.client = ollama || (provider === 'cloud' ? kit.ollama : kit.local);
+    model ||= this.client.cloud ? 'gpt-oss:120b' : 'qwen3:8b';
     Object.assign(this, { kit, model, system, toolNames: tools, think, maxSteps, options, onEvent });
     this.messages = []; this.ctrl = null;
   }
@@ -39,7 +43,7 @@ export class Agent {
     try {
       for (let step = 0; step < this.maxSteps; step++) {
         const msg = { role: 'assistant', content: '' }; let thinking = ''; const calls = [];
-        for await (const ch of this.kit.ollama.chat({ model: this.model, messages: [{ role: 'system', content: this.system }, ...this.messages], tools, ...(this.think !== undefined ? { think: this.think } : {}), ...(this.options ? { options: this.options } : {}), signal })) {
+        for await (const ch of this.client.chat({ model: this.model, messages: [{ role: 'system', content: this.system }, ...this.messages], tools, ...(this.think !== undefined ? { think: this.think } : {}), ...(this.options ? { options: this.options } : {}), signal })) {
           const m = ch.message || {};
           if (m.thinking) { thinking += m.thinking; this.emit({ type: 'thinking', delta: m.thinking }); }
           if (m.content) { msg.content += m.content; this.emit({ type: 'text', delta: m.content }); }

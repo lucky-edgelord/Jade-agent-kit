@@ -10,7 +10,8 @@ A browser workspace for AI agents, loaded from a CDN with one import. It gives a
 - **TensorFlow.js**, **ONNX Runtime Web** and **LiteRT** (`.tflite`), on WebGPU when the device has it
 - a **webxdc** host for running `.xdc` apps in a sandboxed frame
 - **LLM tool definitions** (OpenAI/Ollama and Anthropic shapes) with one dispatcher
-- a small **pi-style agent** on **Ollama Cloud** with six tools: `read`, `write`, `edit`, `bash`, `search`, `fetch`
+- **embeddings** from Ollama on your machine, and a **vector store** on sqlite-vec (semantic and hybrid search)
+- a small **pi-style agent** on **Ollama Cloud** or **Ollama on your machine**, with six tools: `read`, `write`, `edit`, `bash`, `search`, `fetch`
 
 Its pieces come from [Jade Vault](https://github.com/lucky-edgelord/jade-vault).
 
@@ -18,7 +19,7 @@ Its pieces come from [Jade Vault](https://github.com/lucky-edgelord/jade-vault).
 
 ```html
 <script type="module">
-  import { createKit } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/jade-agent-kit@v0.1.0/dist/jade-agent-kit.js';
+  import { createKit } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.1.0/dist/jade-agent-kit.js';
 
   const kit = await createKit({ persist: 'my-app' });          // files kept in IndexedDB under "my-app"
   kit.vfs.write('/hello.txt', 'hello world\n');
@@ -53,7 +54,8 @@ in the bottom four rows come from.
 const kit = await createKit({
   persist: 'my-app',            // IndexedDB name (default: memory only)
   files: { '/a.txt': 'hi' },    // added when the workspace is empty
-  ollamaKey: '…',               // for the agent, search and fetch
+  ollamaKey: '…',               // Ollama Cloud: the agent on the cloud, web search and fetch
+  ollamaHost: 'http://localhost:11434',   // Ollama on a machine: the agent and embeddings (this is the default)
 });
 ```
 
@@ -157,6 +159,24 @@ kit.webxdc.updates(app); s.close(); kit.webxdc.pack(app);      // → .xdc bytes
 
 Apps run in an `iframe sandbox="allow-scripts …"` (no same-origin access, no network); their updates persist with the kit.
 
+### Embeddings and vector search: `kit.embed`, `kit.vectors`
+
+Embeddings come from Ollama on your machine (`ollama pull embeddinggemma`, or any embedding model:
+`nomic-embed-text`, `qwen3-embedding`, `mxbai-embed-large`, …). Ollama Cloud has no embedding models.
+
+```js
+const v = await kit.embed('hello world');                       // one vector
+const vs = await kit.embed(['a', 'b'], { model: 'nomic-embed-text' });
+
+const store = await kit.vectors.open('/data/notes.db');          // SQLite + sqlite-vec, saved in the VFS (or ':memory:')
+await store.add([{ id: 'n1', text: 'Cats sleep 15 hours a day', meta: { source: 'wiki' } }, 'plain text works too']);
+await store.search('how long do cats sleep', { limit: 5 });      // [{ id, text, meta, distance, score }]
+await store.search('cats sleep', { hybrid: true });              // meaning + BM25 keywords, merged
+store.remove('n1'); store.count(); store.close();                // close() saves
+```
+
+A store remembers which model embedded it and refuses another (vectors from different models do not compare).
+
 ### Tools for LLMs: `kit.tools`
 
 ```js
@@ -175,17 +195,18 @@ kit.tools.add('now', { description: 'the time', parameters: { type: 'object', pr
 | `python`, `javascript` | run code |
 | `sqlite` | SQL on a database file, rows as JSON |
 | `search_files` | BM25 over the files under a folder |
-| `search`, `fetch` | Ollama web search and web fetch (need an Ollama key) |
+| `search`, `fetch` | Ollama Cloud web search and web fetch (need an Ollama Cloud key) |
 
 ### The agent: `kit.agent()`
 
-A minimal coding agent in the style of [pi](https://github.com/badlogic/pi-mono): a model on Ollama Cloud, a loop,
-and the tools `read`, `write`, `edit`, `bash`, `search`, `fetch`.
+A minimal coding agent in the style of [pi](https://github.com/badlogic/pi-mono): a model on Ollama, a loop, and the
+tools `read`, `write`, `edit`, `bash`, `search`, `fetch`.
 
 ```js
-const kit = await createKit({ ollamaKey: 'your Ollama API key' });
+const kit = await createKit({ ollamaKey: 'your Ollama Cloud key' });   // leave it out to use Ollama on your machine
 const agent = kit.agent({
-  model: 'gpt-oss:120b',           // any Ollama Cloud model that supports tools
+  provider: 'cloud',               // 'cloud' or 'local' (default: cloud when there is a key, else local)
+  model: 'gpt-oss:120b',           // any model with tool support (default gpt-oss:120b on the cloud, qwen3:8b locally)
   onEvent: e => {                  // text / thinking (delta), tool_call, tool_result, turn_end, done, error
     if (e.type === 'text') output.append(e.delta);
   },
@@ -194,9 +215,11 @@ const answer = await agent.prompt('Write fizzbuzz.py, run it and show me the out
 agent.abort(); agent.reset(); agent.messages;   // stop, clear, the history
 ```
 
-Options: `system` (prompt), `tools` (names, default the six above), `think` (`true` or `'low'|'medium'|'high'` for
-models that think), `maxSteps` (40), `options` (Ollama model options). `kit.ollama` is the client itself:
-`chat()`, `models()`, `webSearch()`, `webFetch()`.
+`search` and `fetch` always use Ollama Cloud's web search and web fetch, so they need the cloud key even when the
+agent runs locally. Options: `system` (prompt), `tools` (names, default the six above), `think` (`true` or
+`'low'|'medium'|'high'`), `maxSteps` (40), `options` (Ollama model options), `ollama` (your own client).
+`kit.ollama` (the cloud) and `kit.local` (your machine) are the clients: `chat()`, `models()`, `embed()`,
+`webSearch()`, `webFetch()`.
 
 ## Things to know
 
@@ -207,8 +230,11 @@ models that think), `maxSteps` (40), `options` (Ollama model options). `kit.olla
 - **Sandboxing**: scripts run in Web Workers of your page's origin. They cannot touch the page or its DOM, but they
   can make network requests as your page (pass `network: false` to `kit.js.run` to turn that off). webxdc apps are
   isolated in a sandboxed frame. Treat the kit as a workspace, not a security boundary against hostile code.
-- **API keys**: an Ollama key used in a browser is visible to whoever uses that page. Use it in your own tools, or
-  put a small proxy in front of `https://ollama.com` and set `kit.ollama.host` to it.
+- **API keys**: an Ollama Cloud key used in a browser is visible to whoever uses that page. Use it in your own
+  tools, or put a small proxy in front of `https://ollama.com` and set `kit.ollama.host` to it.
+- **Ollama on your machine**: a web page may only call it when Ollama allows the page's origin. Start it with
+  `OLLAMA_ORIGINS="https://your.site" ollama serve` (or `"*"`). Chrome may also ask the user to allow local network
+  access the first time.
 - **Big files**: files over 16 MB are not copied into BusyBox commands, over 4 MB into Python and over 2 MB into JS
   scripts (SQLite databases excepted).
 

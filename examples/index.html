@@ -33,14 +33,14 @@
     <form id="shForm"><input id="shIn" autocomplete="off" spellcheck="false" placeholder="ls -la /  ·  python -c 'print(1+1)'  ·  sqlite3 :memory: 'select vec_version()'"><button>Run</button></form>
   </section>
   <section>
-    <h2>Agent (Ollama Cloud)</h2>
-    <div class="row"><input id="key" type="password" placeholder="Ollama API key (ollama.com/settings/keys)" autocomplete="off"><input id="model" value="gpt-oss:120b" style="max-width:150px" aria-label="Model"></div>
+    <h2>Agent (Ollama)</h2>
+    <div class="row"><input id="key" type="password" placeholder="Ollama Cloud key (blank: Ollama on this machine)" autocomplete="off"><input id="model" placeholder="model" style="max-width:150px" aria-label="Model"></div>
     <pre id="chat"></pre>
     <form id="agForm"><input id="agIn" autocomplete="off" placeholder="Write fizzbuzz.py, run it, and show me the output"><button id="agBtn">Send</button></form>
   </section>
 </main>
 <script type="module">
-  // In your own project: import { createKit } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/jade-agent-kit@v0.1.0/dist/jade-agent-kit.js';
+  // In your own project: import { createKit } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.1.0/dist/jade-agent-kit.js';
   import { createKit } from '../dist/jade-agent-kit.js';
   const $ = id => document.getElementById(id);
   const out = (el, text, cls) => { const s = document.createElement('span'); if (cls) s.className = cls; s.textContent = text; el.append(s); el.scrollTop = el.scrollHeight; };
@@ -53,18 +53,20 @@
     await kit.sh.run(cmd, { onOutput: (t, isErr) => out($('term'), t, isErr ? 'err' : '') });
   };
   try { $('key').value = localStorage.getItem('jak-key') || ''; } catch {}
-  let agent = null;
+  const agents = {};   // one per provider, each with its own history
+  const onEvent = ev => {
+    if (ev.type === 'text') out($('chat'), ev.delta);
+    else if (ev.type === 'thinking') out($('chat'), ev.delta, 'think');
+    else if (ev.type === 'tool_call') out($('chat'), `\n▸ ${ev.name} ${JSON.stringify(ev.args).slice(0, 200)}\n`, 'tool');
+    else if (ev.type === 'tool_result') out($('chat'), ev.result.slice(0, 600) + '\n', 'think');
+  };
   $('agForm').onsubmit = async e => {
     e.preventDefault(); const text = $('agIn').value.trim(); if (!text) return;
     kit.ollama.apiKey = $('key').value.trim(); try { localStorage.setItem('jak-key', kit.ollama.apiKey); } catch {}
-    agent ||= kit.agent({ onEvent: ev => {
-      if (ev.type === 'text') out($('chat'), ev.delta);
-      else if (ev.type === 'thinking') out($('chat'), ev.delta, 'think');
-      else if (ev.type === 'tool_call') out($('chat'), `\n▸ ${ev.name} ${JSON.stringify(ev.args).slice(0, 200)}\n`, 'tool');
-      else if (ev.type === 'tool_result') out($('chat'), ev.result.slice(0, 600) + '\n', 'think');
-    } });
-    agent.model = $('model').value.trim() || 'gpt-oss:120b';
-    $('agIn').value = ''; $('agBtn').disabled = true; out($('chat'), `\n> ${text}\n`, 'cmd');
+    const provider = kit.ollama.apiKey ? 'cloud' : 'local';
+    const agent = agents[provider] ||= kit.agent({ provider, onEvent });
+    if ($('model').value.trim()) agent.model = $('model').value.trim();
+    $('agIn').value = ''; $('agBtn').disabled = true; out($('chat'), `\n> ${text}  (${agent.model} on ${agent.client.name})\n`, 'cmd');
     try { await agent.prompt(text); out($('chat'), '\n'); } catch (err) { out($('chat'), `\n${err.message}\n`, 'err'); } finally { $('agBtn').disabled = false; }
   };
 </script>
