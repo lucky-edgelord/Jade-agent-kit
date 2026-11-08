@@ -11,6 +11,7 @@ A browser workspace for AI agents, loaded from a CDN with one import. It gives a
 - a **webxdc** host for running `.xdc` apps in a sandboxed frame
 - **LLM tool definitions** (OpenAI/Ollama and Anthropic shapes) with one dispatcher
 - **decisions** with decision models on **Ollaya**, **Ollama** (0.35+) or **Ollama Cloud**: pick one, score, yes/no, with calibrated probabilities
+- a **cron scheduler** (plain English or cron) for shell, JS, Python, agent or function jobs, and a **task list**
 - **embeddings** from Ollama on your machine, and a **vector store** on sqlite-vec (semantic and hybrid search)
 - a small **pi-style agent** on **Ollama Cloud** or **Ollama on your machine**, with six tools: `read`, `write`, `edit`, `bash`, `search`, `fetch`
 
@@ -189,6 +190,33 @@ The servers speak different formats, and the kit translates both ways so the ans
 
 Scripts call `await kit.decide({ … })` too, and agents get a `decide` tool (`kit.agent({ tools: [...DEFAULT_TOOLS, 'decide'] })`).
 
+### Scheduling and tasks: `kit.schedule`, `kit.cron`, `kit.tasks`
+
+```js
+kit.schedule.add({ name: 'backup', when: 'every day at 2am', command: 'tar -czf /backup.tgz /notes' });
+kit.schedule.add({ name: 'digest', when: 'weekdays at 8:30', prompt: 'Summarize /inbox into /digest.md' });   // an agent run
+kit.schedule.add({ when: 'in 20 minutes', js: `require('fs').writeFileSync('/ping.txt', 'pong')` });         // once
+kit.schedule.add({ when: '*/5 * * * *', run: () => refreshSomething() });                                   // a function (not saved)
+kit.schedule.add({ when: '@hourly', python: 'print("hi")' });
+kit.schedule.list(); kit.schedule.runNow('backup'); kit.schedule.disable('digest'); kit.schedule.remove('backup');
+kit.schedule.on(e => console.log(e.type, e.job.name, e.result));   // 'run' | 'error' | 'change'
+```
+
+`when` is plain English ("every 30 minutes", "every monday at 6pm", "tomorrow at 7pm", "in 2 hours") or 5-field cron
+(`* , - /`, names, `@daily`…), in local time. Jobs run only while a page with the kit is open; one missed while it was
+closed runs once when the page opens again. Jobs are saved in `/.kit/schedule.json` (function jobs are not: add them
+again on each load). `createKit({ scheduler: false })` keeps it stopped until `kit.schedule.start()`.
+`kit.cron` has the parser itself: `fromText`, `parse`, `next`, `upcoming`, `describe`.
+
+```js
+const [a] = kit.tasks.add(['Plan the API', 'Write tests']);   // or add({ title, notes, due })
+kit.tasks.start(a.id); kit.tasks.done(a.id); kit.tasks.update(2, { notes: 'edge cases' });
+kit.tasks.list({ status: 'pending' }); kit.tasks.text();     // [x] #1 Plan the API …
+kit.tasks.on(items => render(items)); kit.tasks.clear();      // clear removes done tasks
+```
+
+Agents get both as tools: `kit.agent({ tools: [...DEFAULT_TOOLS, 'tasks', 'schedule'] })`.
+
 ### Embeddings and vector search: `kit.embed`, `kit.vectors`
 
 Embeddings come from Ollama on your machine (`ollama pull embeddinggemma`, or any embedding model:
@@ -226,6 +254,8 @@ kit.tools.add('now', { description: 'the time', parameters: { type: 'object', pr
 | `sqlite` | SQL on a database file, rows as JSON |
 | `search_files` | BM25 over the files under a folder |
 | `decide` | a decision model: choice, score or yes/no with probabilities |
+| `tasks` | the task list: add, update status, list, remove, clear |
+| `schedule` | schedule a command, JS, Python or agent prompt: add, list, remove, enable, disable, run |
 | `search`, `fetch` | Ollama Cloud web search and web fetch (need an Ollama Cloud key) |
 
 ### The agent: `kit.agent()`

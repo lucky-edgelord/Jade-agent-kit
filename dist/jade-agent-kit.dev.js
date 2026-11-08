@@ -4807,6 +4807,508 @@ var Decisions = class {
   }
 };
 
+// src/tasks.js
+var STATUSES = ["pending", "in_progress", "done"];
+var Tasks = class {
+  constructor(vfs, path = "/.kit/tasks.json") {
+    this.vfs = vfs;
+    this.path = path;
+    this.items = [];
+    this.seq = 0;
+    this.listeners = /* @__PURE__ */ new Set();
+    try {
+      const j = JSON.parse(vfs.read(path));
+      this.items = j.items || [];
+      this.seq = j.seq || Math.max(0, ...this.items.map((t) => t.id));
+    } catch {
+    }
+  }
+  _save() {
+    this.vfs.write(this.path, JSON.stringify({ seq: this.seq, items: this.items }, null, 1));
+    for (const f of this.listeners) {
+      try {
+        f(this.items);
+      } catch {
+      }
+    }
+  }
+  /** fn(items) after every change */
+  on(fn) {
+    this.listeners.add(fn);
+    return () => this.listeners.delete(fn);
+  }
+  get(id) {
+    const t = this.items.find((x) => x.id === +id);
+    if (!t) throw new Error(`no task #${id}`);
+    return t;
+  }
+  /** add one task or several: add('Write tests') · add(['a', 'b']) · add({ title, notes, due }) */
+  add(task) {
+    const list = (Array.isArray(task) ? task : [task]).map((t) => typeof t === "string" ? { title: t } : t).filter((t) => String(t?.title ?? "").trim());
+    if (!list.length) throw new Error("a task needs a title");
+    const now = Date.now();
+    const added = list.map((t) => ({ id: ++this.seq, title: String(t.title).trim(), status: STATUSES.includes(t.status) ? t.status : "pending", ...t.notes ? { notes: String(t.notes) } : {}, ...t.due ? { due: String(t.due) } : {}, created: now, updated: now }));
+    this.items.push(...added);
+    this._save();
+    return Array.isArray(task) ? added : added[0];
+  }
+  /** change a task: update(3, { status: 'done' }) · update(3, { title, notes, due }) */
+  update(id, fields = {}) {
+    const t = this.get(id);
+    if (fields.status != null) {
+      if (!STATUSES.includes(fields.status)) throw new Error(`status must be ${STATUSES.join(", ")}`);
+      t.status = fields.status;
+    }
+    for (const k of ["title", "notes", "due"]) if (fields[k] != null) t[k] = String(fields[k]);
+    t.updated = Date.now();
+    this._save();
+    return t;
+  }
+  start(id) {
+    return this.update(id, { status: "in_progress" });
+  }
+  done(id) {
+    return this.update(id, { status: "done" });
+  }
+  remove(id) {
+    this.get(id);
+    this.items = this.items.filter((x) => x.id !== +id);
+    this._save();
+  }
+  /** remove finished tasks (or all with { all: true }) */
+  clear({ all = false } = {}) {
+    const n = this.items.length;
+    this.items = all ? [] : this.items.filter((t) => t.status !== "done");
+    if (all) this.seq = 0;
+    this._save();
+    return n - this.items.length;
+  }
+  list({ status } = {}) {
+    return this.items.filter((t) => !status || t.status === status).map((t) => ({ ...t }));
+  }
+  /** the list as text, as an agent reads it: [ ] pending, [~] in progress, [x] done */
+  text() {
+    if (!this.items.length) return "The task list is empty.";
+    const mark = { pending: "[ ]", in_progress: "[~]", done: "[x]" };
+    return this.items.map((t) => `${mark[t.status]} #${t.id} ${t.title}${t.due ? ` (due ${t.due})` : ""}${t.notes ? ` \u2014 ${t.notes}` : ""}`).join("\n");
+  }
+};
+
+// src/internal/cron_core.js
+var Cron = /* @__PURE__ */ (() => {
+  const SHORT = { "@hourly": "0 * * * *", "@daily": "0 0 * * *", "@midnight": "0 0 * * *", "@weekly": "0 0 * * 0", "@monthly": "0 0 1 * *", "@yearly": "0 0 1 1 *", "@annually": "0 0 1 1 *" };
+  const MON = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+  const DOW = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+  const DOW_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const FIELDS = [
+    { name: "minute", min: 0, max: 59 },
+    { name: "hour", min: 0, max: 23 },
+    { name: "day of month", min: 1, max: 31 },
+    { name: "month", min: 1, max: 12, names: MON, base: 1 },
+    { name: "day of week", min: 0, max: 7, names: DOW, base: 0 }
+  ];
+  function field(src, f) {
+    const set = /* @__PURE__ */ new Set();
+    for (const part of src.toLowerCase().split(",")) {
+      const m = /^(\*|[a-z0-9]+(?:-[a-z0-9]+)?)(?:\/(\d+))?$/.exec(part);
+      if (!m) throw new Error(`bad ${f.name} "${part}"`);
+      const val = (x) => {
+        if (f.names) {
+          const i = f.names.indexOf(x);
+          if (i >= 0) return i + f.base;
+        }
+        if (!/^\d+$/.test(x)) throw new Error(`bad ${f.name} "${x}"`);
+        const n = +x;
+        if (n < f.min || n > f.max) throw new Error(`${f.name} ${n} is out of range ${f.min}-${f.max}`);
+        return n;
+      };
+      let lo, hi;
+      if (m[1] === "*") {
+        lo = f.min;
+        hi = f.max;
+        if (f.name === "day of week") hi = 6;
+      } else if (m[1].includes("-")) {
+        [lo, hi] = m[1].split("-").map(val);
+        if (lo > hi) throw new Error(`${f.name} range ${m[1]} runs backwards`);
+      } else {
+        lo = val(m[1]);
+        hi = m[2] ? f.max : lo;
+      }
+      const step = m[2] ? +m[2] : 1;
+      if (!step) throw new Error(`${f.name} step must be at least 1`);
+      for (let v = lo; v <= hi; v += step) set.add(f.name === "day of week" && v === 7 ? 0 : v);
+    }
+    return set;
+  }
+  function parse(expr) {
+    let e = String(expr || "").trim().replace(/\s+/g, " ");
+    if (SHORT[e.toLowerCase()]) e = SHORT[e.toLowerCase()];
+    const parts = e.split(" ");
+    if (parts.length !== 5) throw new Error(`cron needs 5 fields (minute hour day month weekday), got ${parts.length}`);
+    const [min, hour, dom, mon, dow] = parts.map((p, i) => field(p, FIELDS[i]));
+    return { expr: e, min, hour, dom, mon, dow, domStar: parts[2] === "*", dowStar: parts[4] === "*" };
+  }
+  function dayOk(c, d) {
+    const a = c.dom.has(d.getDate()), b = c.dow.has(d.getDay());
+    if (c.domStar && c.dowStar) return true;
+    if (c.domStar) return b;
+    if (c.dowStar) return a;
+    return a || b;
+  }
+  function next(expr, from = Date.now()) {
+    const c = typeof expr === "string" ? parse(expr) : expr;
+    const d = new Date(from);
+    d.setSeconds(0, 0);
+    d.setMinutes(d.getMinutes() + 1);
+    for (let i = 0; i < 2e5; i++) {
+      if (!c.mon.has(d.getMonth() + 1)) {
+        d.setMonth(d.getMonth() + 1, 1);
+        d.setHours(0, 0, 0, 0);
+        continue;
+      }
+      if (!dayOk(c, d)) {
+        d.setDate(d.getDate() + 1);
+        d.setHours(0, 0, 0, 0);
+        continue;
+      }
+      if (!c.hour.has(d.getHours())) {
+        d.setHours(d.getHours() + 1, 0, 0, 0);
+        continue;
+      }
+      if (!c.min.has(d.getMinutes())) {
+        d.setMinutes(d.getMinutes() + 1, 0, 0);
+        continue;
+      }
+      return d.getTime();
+    }
+    return null;
+  }
+  function upcoming(expr, n = 3, from = Date.now()) {
+    const out = [];
+    let t = from;
+    for (let i = 0; i < n; i++) {
+      t = next(expr, t);
+      if (!t) break;
+      out.push(t);
+    }
+    return out;
+  }
+  const pad = (n) => String(n).padStart(2, "0");
+  const hm = (h, m) => {
+    const d = new Date(2e3, 0, 1, h, m);
+    return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  };
+  function describe(expr) {
+    let c;
+    try {
+      c = parse(expr);
+    } catch {
+      return expr;
+    }
+    const [mi, ho, dm, mo, dw] = c.expr.split(" ");
+    const one = (s) => /^\d+$/.test(s);
+    let m;
+    if ((m = /^\*\/(\d+)$/.exec(mi)) && ho === "*" && dm === "*" && mo === "*" && dw === "*") return `every ${m[1]} minutes`;
+    if (mi === "*" && ho === "*" && dm === "*" && mo === "*" && dw === "*") return "every minute";
+    if (one(mi) && ho === "*" && dm === "*" && mo === "*" && dw === "*") return mi === "0" ? "every hour" : `every hour at :${pad(mi)}`;
+    if (one(mi) && (m = /^\*\/(\d+)$/.exec(ho)) && dm === "*" && mo === "*" && dw === "*") return `every ${m[1]} hours at :${pad(mi)}`;
+    if (one(mi) && one(ho) && mo === "*") {
+      const t = hm(+ho, +mi);
+      if (dm === "*" && dw === "*") return `daily at ${t}`;
+      if (dm === "*" && (dw === "1-5" || dw === "mon-fri")) return `weekdays at ${t}`;
+      if (dm === "*" && (dw === "0,6" || dw === "6,0" || dw === "sat,sun")) return `weekends at ${t}`;
+      if (dm === "*" && c.dow.size === 1) return `every ${DOW_LONG[[...c.dow][0]]} at ${t}`;
+      if (dm === "*" && dw !== "*" && c.dow.size > 1) return `every ${[...c.dow].sort((a, b) => a - b).map((d) => DOW_LONG[d].slice(0, 3)).join(" & ")} at ${t}`;
+      if (one(dm) && dw === "*") return `monthly on day ${dm} at ${t}`;
+      if ((m = /^\*\/(\d+)$/.exec(dm)) && dw === "*") return `every ${m[1]} days at ${t}`;
+    }
+    return c.expr;
+  }
+  const DAYMAP = {
+    sun: 0,
+    sunday: 0,
+    sundays: 0,
+    mon: 1,
+    monday: 1,
+    mondays: 1,
+    tue: 2,
+    tues: 2,
+    tuesday: 2,
+    tuesdays: 2,
+    wed: 3,
+    weds: 3,
+    wednesday: 3,
+    wednesdays: 3,
+    thu: 4,
+    thur: 4,
+    thurs: 4,
+    thursday: 4,
+    thursdays: 4,
+    fri: 5,
+    friday: 5,
+    fridays: 5,
+    sat: 6,
+    saturday: 6,
+    saturdays: 6
+  };
+  const HELP = 'Use plain English like "every day at 9am", "weekdays at 8:30", "every monday at 6pm", "every 30 minutes", "in 20 minutes", "tomorrow at 7pm", or a 5-field cron like "0 9 * * *".';
+  function timeOf(t) {
+    if (/\b(noon|midday)\b/.test(t)) return [12, 0];
+    if (/\bmidnight\b/.test(t)) return [0, 0];
+    const m = /(?:^|\s)(?:at\s+)?(\d{1,2})(?:[:.h](\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?(?=\s|$)/.exec(t);
+    if (m && (m[2] || m[3] || /\bat\s+\d/.test(t) || /^\d{1,2}$/.test(t.trim()) || /\b(daily|weekdays?|weekends?|day|week)\s+\d/.test(t))) {
+      let h = +m[1];
+      const mi = +(m[2] || 0);
+      const ap = (m[3] || "").replace(/\./g, "");
+      if (ap === "pm" && h < 12) h += 12;
+      if (ap === "am" && h === 12) h = 0;
+      if (h <= 23 && mi <= 59) return [h, mi];
+    }
+    if (/\bmorning\b/.test(t)) return [9, 0];
+    if (/\bafternoon\b/.test(t)) return [14, 0];
+    if (/\bevening\b/.test(t)) return [18, 0];
+    if (/\b(tonight|night|nightly)\b/.test(t)) return [21, 0];
+    return null;
+  }
+  function fromText(text) {
+    const raw = String(text ?? "").trim();
+    if (!raw) throw new Error("no time was given. " + HELP);
+    if (SHORT[raw.toLowerCase()] || /^[\d*][\d*\/,\-]*(\s+[\d*\/,\-a-z]+){4}$/i.test(raw)) {
+      try {
+        return { cron: parse(raw).expr };
+      } catch (e) {
+        if (raw.split(/\s+/).length === 5) throw new Error(e.message + ". " + HELP);
+      }
+    }
+    let t = " " + raw.toLowerCase().replace(/[,;]/g, " ").replace(/\b(and|&|the|o'?clock)\b/g, " ").replace(/\s+/g, " ").trim() + " ";
+    let m;
+    if (m = /\bin\s+(\d+|an?|one)\s*(m|mins?|minutes?|h|hrs?|hours?|d|days?)\b/.exec(t)) {
+      const n = /^\d+$/.test(m[1]) ? +m[1] : 1, u = m[2][0];
+      if (!n) throw new Error("the delay must be at least 1. " + HELP);
+      return { once: Date.now() + n * (u === "m" ? 6e4 : u === "h" ? 36e5 : 864e5) };
+    }
+    if (/\b(every|each)\s+minute\b/.test(t)) return { cron: "* * * * *" };
+    if (m = /\b(?:every|each)\s+(\d+)\s*(m|mins?|minutes?)\b/.exec(t)) {
+      const n = +m[1];
+      if (n < 1) throw new Error("interval must be at least 1 minute");
+      return { cron: n >= 60 ? "0 * * * *" : `*/${n} * * * *` };
+    }
+    if (m = /\b(?:every|each)\s+(\d+)\s*(h|hrs?|hours?)\b/.exec(t)) {
+      const n = +m[1];
+      if (n < 1 || n > 23) throw new Error("hour interval must be 1-23");
+      return { cron: `0 */${n} * * *` };
+    }
+    if (/\b(hourly|every hour|each hour)\b/.test(t)) return { cron: "0 * * * *" };
+    const everyNDays = /\b(?:every|each)\s+(\d+)\s*days?\b/.exec(t);
+    const clean = t.replace(/\b(?:every|each|in)\s+\d+\s*\w+/g, " ").replace(/\bon\s+the\s+\d{1,2}(st|nd|rd|th)?\b|\b\d{1,2}(st|nd|rd|th)\b/g, " ");
+    const tm = timeOf(clean);
+    const [h, mi] = tm || [9, 0];
+    const days = /* @__PURE__ */ new Set();
+    for (const w of t.split(" ")) if (w in DAYMAP) days.add(DAYMAP[w]);
+    let dow = /\bweekdays?\b/.test(t) ? "1-5" : /\bweekends?\b/.test(t) ? "0,6" : days.size ? [...days].sort((a, b) => a - b).join(",") : "";
+    const recurring = /\b(every|each|daily|nightly|weekly|monthly|weekdays?|weekends?)\b/.test(t) || /\b(sun|mon|tues|wednes|thurs|fri|satur)days\b/.test(t);
+    if (recurring) {
+      if (everyNDays) {
+        const n = +everyNDays[1];
+        if (n < 1 || n > 31) throw new Error("day interval must be 1-31");
+        return { cron: `${mi} ${h} */${n} * *` };
+      }
+      if (/\b(monthly|every month|each month)\b/.test(t)) {
+        const d = /\b(\d{1,2})(st|nd|rd|th)\b/.exec(t)?.[1] || /\bon\s+(?:the\s+)?(\d{1,2})\b/.exec(t)?.[1] || 1;
+        if (+d < 1 || +d > 31) throw new Error("day of month must be 1-31");
+        return { cron: `${mi} ${h} ${+d} * *` };
+      }
+      if (/\b(weekly|every week|each week)\b/.test(t) && !dow) dow = "1";
+      return { cron: `${mi} ${h} * * ${dow || "*"}` };
+    }
+    const at = /* @__PURE__ */ new Date();
+    at.setSeconds(0, 0);
+    if (/\btomorrow\b/.test(t)) {
+      at.setDate(at.getDate() + 1);
+      at.setHours(h, mi, 0, 0);
+      return { once: at.getTime() };
+    }
+    if (days.size === 1) {
+      const d = [...days][0];
+      at.setDate(at.getDate() + (d - at.getDay() + 7) % 7);
+      at.setHours(h, mi, 0, 0);
+      if (at.getTime() <= Date.now()) at.setDate(at.getDate() + 7);
+      return { once: at.getTime() };
+    }
+    if (tm || /\b(today|tonight)\b/.test(t)) {
+      at.setHours(h, mi, 0, 0);
+      if (at.getTime() <= Date.now()) at.setDate(at.getDate() + 1);
+      return { once: at.getTime() };
+    }
+    throw new Error(`could not understand the time "${raw}". ` + HELP);
+  }
+  return { parse, next, upcoming, describe, fromText, HELP };
+})();
+
+// src/schedule.js
+var Scheduler = class {
+  constructor(kit, { path = "/.kit/schedule.json", tickMs = 15e3, catchUp = true } = {}) {
+    this.kit = kit;
+    this.path = path;
+    this.tickMs = tickMs;
+    this.catchUp = catchUp;
+    this.jobs = [];
+    this.fns = /* @__PURE__ */ new Map();
+    this.listeners = /* @__PURE__ */ new Set();
+    this.timer = null;
+    this.running = /* @__PURE__ */ new Set();
+    try {
+      this.jobs = JSON.parse(kit.vfs.read(path)).jobs || [];
+    } catch {
+    }
+  }
+  _save() {
+    this.kit.vfs.write(this.path, JSON.stringify({ jobs: this.jobs.filter((j) => j.kind !== "fn") }, null, 1));
+  }
+  /** fn(event): { type: 'run'|'error'|'change', job, result? } */
+  on(fn) {
+    this.listeners.add(fn);
+    return () => this.listeners.delete(fn);
+  }
+  _emit(e) {
+    for (const f of this.listeners) {
+      try {
+        f(e);
+      } catch {
+      }
+    }
+  }
+  find(idOrName) {
+    const s = String(idOrName);
+    const j = this.jobs.find((x) => x.id === s) || this.jobs.find((x) => x.name.toLowerCase() === s.toLowerCase());
+    if (!j) throw new Error(`no scheduled job "${s}"`);
+    return j;
+  }
+  /**
+   * Add a job. when: cron ("0 9 * * *", "@daily"), plain English, a Date or a timestamp (once).
+   * Give one of: command (shell), js, python, prompt (agent; agent: { provider, model, tools }), or run (a function, not saved).
+   * @returns the job ({ id, name, kind, cron | once, next, enabled, runs, last })
+   */
+  add({ name, when, command, js, python, prompt, run, agent = null, enabled = true, cwd = "/" } = {}) {
+    let sched;
+    if (when instanceof Date || typeof when === "number") {
+      const t = +new Date(when);
+      if (!(t > Date.now())) throw new Error("that time is in the past");
+      sched = { once: t };
+    } else sched = Cron.fromText(when);
+    const kind = run ? "fn" : command != null ? "shell" : js != null ? "js" : python != null ? "python" : prompt != null ? "agent" : null;
+    if (!kind) throw new Error("give what to run: command, js, python, prompt or run");
+    const id = "j" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const job = { id, name: String(name || (command ?? prompt ?? "job")).slice(0, 60), kind, ...sched, payload: command ?? js ?? python ?? prompt ?? null, agent, cwd, enabled: !!enabled, created: Date.now(), runs: 0, last: null };
+    job.next = job.cron ? Cron.next(job.cron) : job.once;
+    if (job.cron && !job.next) throw new Error(`"${job.cron}" never happens`);
+    if (run) this.fns.set(id, run);
+    this.jobs.push(job);
+    this._save();
+    this._emit({ type: "change", job });
+    return { ...job };
+  }
+  remove(idOrName) {
+    const j = this.find(idOrName);
+    this.jobs = this.jobs.filter((x) => x !== j);
+    this.fns.delete(j.id);
+    this._save();
+    this._emit({ type: "change", job: j });
+  }
+  enable(idOrName, on = true) {
+    const j = this.find(idOrName);
+    j.enabled = !!on;
+    if (on && j.cron) j.next = Cron.next(j.cron);
+    this._save();
+    this._emit({ type: "change", job: j });
+    return { ...j };
+  }
+  disable(idOrName) {
+    return this.enable(idOrName, false);
+  }
+  list() {
+    return this.jobs.map((j) => ({ ...j, when: j.cron ? Cron.describe(j.cron) : new Date(j.once).toLocaleString() }));
+  }
+  /** run a job now (its schedule is unchanged) */
+  async runNow(idOrName) {
+    return this._run(this.find(idOrName));
+  }
+  async _run(job) {
+    if (this.running.has(job.id)) return { skipped: "still running" };
+    this.running.add(job.id);
+    const t0 = Date.now();
+    let result;
+    try {
+      const k = this.kit;
+      if (job.kind === "shell") {
+        const r = await k.shell.session({ cwd: job.cwd }).run(job.payload);
+        result = { code: r.code, output: r.output };
+      } else if (job.kind === "js") {
+        const r = await k.js.run(job.payload, { cwd: job.cwd });
+        result = { code: r.code, output: r.output, result: r.result };
+      } else if (job.kind === "python") {
+        const r = await k.python.run(job.payload, { cwd: job.cwd });
+        result = { code: r.code, output: r.output };
+      } else if (job.kind === "agent") {
+        const text = await k.agent({ ...job.agent || {} }).prompt(job.payload);
+        result = { code: 0, output: text };
+      } else if (job.kind === "fn") {
+        const f = this.fns.get(job.id);
+        if (!f) throw new Error("this function job was added on another page load; add it again");
+        const v = await f(job);
+        result = { code: 0, output: v === void 0 ? "" : typeof v === "string" ? v : JSON.stringify(v) };
+      } else throw new Error(`unknown job kind ${job.kind}`);
+    } catch (e) {
+      result = { code: 1, output: "", error: String(e?.message || e) };
+    } finally {
+      this.running.delete(job.id);
+    }
+    result.at = t0;
+    result.ms = Date.now() - t0;
+    if (result.output?.length > 4e3) result.output = result.output.slice(0, 4e3) + "\u2026";
+    job.runs++;
+    job.last = result;
+    this._save();
+    this._emit({ type: result.error || result.code ? "error" : "run", job: { ...job }, result });
+    return result;
+  }
+  /** check for due jobs now (start() does this every tickMs) */
+  async tick(now = Date.now()) {
+    const due = this.jobs.filter((j) => j.enabled && j.next && j.next <= now);
+    for (const j of due) {
+      if (j.cron) j.next = Cron.next(j.cron, now);
+      else {
+        j.enabled = false;
+        j.next = null;
+      }
+    }
+    if (due.length) this._save();
+    await Promise.all(due.map((j) => this._run(j)));
+    return due.length;
+  }
+  /** start running jobs while the page is open */
+  start() {
+    if (this.timer) return this;
+    if (!this.catchUp) {
+      const now = Date.now();
+      for (const j of this.jobs) if (j.enabled && j.cron && j.next < now) j.next = Cron.next(j.cron, now);
+    }
+    this.tick().catch(() => {
+    });
+    this.timer = setInterval(() => this.tick().catch(() => {
+    }), this.tickMs);
+    return this;
+  }
+  stop() {
+    clearInterval(this.timer);
+    this.timer = null;
+    return this;
+  }
+  get started() {
+    return !!this.timer;
+  }
+};
+
 // src/tools.js
 var MAX_OUT = 3e4;
 var READ_LINES = 2e3;
@@ -4947,6 +5449,62 @@ ${r.content || ""}${r.links?.length ? "\n\nLinks:\n" + r.links.slice(0, 50).join
         return `${head}${d.confidence != null ? ` | confidence ${d.confidence.toFixed(3)}` : ""}${probs ? `
 probabilities: ${probs}` : ""}
 model: ${d.model} (${kit.decisions.name})`;
+      }
+    },
+    tasks: {
+      description: "Your task list for multi-step work: add tasks when you plan, mark one in_progress while you work on it and done when it is finished. Actions: add (title, or titles for several), update (id, status, title, notes), list, remove (id), clear (removes done tasks).",
+      parameters: obj({ action: { type: "string", enum: ["add", "update", "list", "remove", "clear"] }, title: str, titles: { type: "array", items: str }, id: int, status: { type: "string", enum: ["pending", "in_progress", "done"] }, notes: str }, ["action"]),
+      run(a) {
+        const t = kit.tasks;
+        if (a.action === "add") {
+          const r = t.add(a.titles?.length ? a.titles : { title: a.title, notes: a.notes });
+          return `Added ${[].concat(r).map((x) => "#" + x.id).join(", ")}
+
+${t.text()}`;
+        }
+        if (a.action === "update") {
+          const r = t.update(a.id, { status: a.status, title: a.title, notes: a.notes });
+          return `#${r.id} is ${r.status}
+
+${t.text()}`;
+        }
+        if (a.action === "remove") {
+          t.remove(a.id);
+          return `Removed #${a.id}
+
+${t.text()}`;
+        }
+        if (a.action === "clear") {
+          const n = t.clear();
+          return `Removed ${n} done task${n === 1 ? "" : "s"}
+
+${t.text()}`;
+        }
+        return t.text();
+      }
+    },
+    schedule: {
+      description: 'Schedule work to run later or repeatedly while the page is open: a shell command, JavaScript, Python, or a prompt for an agent. "when" is plain English ("every day at 9am", "weekdays at 8:30", "every 30 minutes", "in 20 minutes", "tomorrow at 7pm") or 5-field cron. Actions: add, list, remove, enable, disable, run (now).',
+      parameters: obj({ action: { type: "string", enum: ["add", "list", "remove", "enable", "disable", "run"] }, name: str, when: str, command: { ...str, description: "a shell command line" }, js: str, python: str, prompt: { ...str, description: "a prompt for an agent" }, id: { ...str, description: "job id or name" } }, ["action"]),
+      async run(a) {
+        const s = kit.schedule;
+        const fmt = (j) => `${j.id} ${j.name} \xB7 ${j.cron ? Cron.describe(j.cron) + ` (${j.cron})` : "once"} \xB7 next ${j.next ? new Date(j.next).toLocaleString() : "\u2014"}${j.enabled ? "" : " \xB7 disabled"}${j.last ? ` \xB7 last ${j.last.error ? "failed: " + j.last.error : "exit " + j.last.code}` : ""}`;
+        if (a.action === "add") {
+          const j = s.add({ name: a.name, when: a.when, command: a.command, js: a.js, python: a.python, prompt: a.prompt });
+          return "Scheduled " + fmt(j) + (s.started ? "" : "\n(the scheduler is stopped: kit.schedule.start())");
+        }
+        if (a.action === "remove") {
+          s.remove(a.id ?? a.name);
+          return "Removed " + (a.id ?? a.name);
+        }
+        if (a.action === "enable" || a.action === "disable") return fmt(s.enable(a.id ?? a.name, a.action === "enable"));
+        if (a.action === "run") {
+          const r = await s.runNow(a.id ?? a.name);
+          return r.error ? `Error: ${r.error}` : (r.output?.trimEnd() || "(no output)") + (r.code ? `
+[exit code ${r.code}]` : "");
+        }
+        const l = s.list();
+        return l.length ? l.map(fmt).join("\n") : "Nothing is scheduled.";
       }
     }
   };
@@ -5095,7 +5653,7 @@ var Agent = class {
 
 // src/index.js
 var VERSION = "0.1.0";
-async function createKit({ persist = false, files = null, ollamaKey = "", ollamaHost = OLLAMA_LOCAL, decide = {}, assetsBase = null, cdn = "https://cdn.jsdelivr.net/npm/", engine = "auto", busybox: bbNow = true } = {}) {
+async function createKit({ persist = false, files = null, ollamaKey = "", ollamaHost = OLLAMA_LOCAL, decide = {}, assetsBase = null, cdn = "https://cdn.jsdelivr.net/npm/", engine = "auto", scheduler = true, busybox: bbNow = true } = {}) {
   if (assetsBase) setAssetsBase(assetsBase);
   const vfs = new VFS({ persist });
   const loaded = await vfs.load().catch(() => false);
@@ -5117,6 +5675,9 @@ async function createKit({ persist = false, files = null, ollamaKey = "", ollama
   kit.vectors = createVectors(kit);
   kit.decisions = new Decisions({ ...decide, kit });
   kit.decide = (o) => kit.decisions.decide(o);
+  kit.cron = Cron;
+  kit.tasks = new Tasks(vfs);
+  kit.schedule = new Scheduler(kit);
   kit.tools = createTools(kit);
   kit.agent = (o = {}) => new Agent({ kit, ...o });
   async function bridge(op, a) {
@@ -5130,12 +5691,14 @@ async function createKit({ persist = false, files = null, ollamaKey = "", ollama
     throw new Error(`kit.${op} is not available in Jade Agent Kit`);
   }
   if (bbNow) busybox.load();
+  if (scheduler) kit.schedule.start();
   return kit;
 }
 export {
   Agent,
   BM25,
   BusyBox,
+  Cron,
   DEFAULT_TOOLS,
   Database,
   Decisions,
@@ -5147,8 +5710,10 @@ export {
   Ollama,
   OllamaCloud,
   Python,
+  Scheduler,
   ShellSession,
   Sqlite,
+  Tasks,
   VERSION,
   VFS,
   VectorStore,
