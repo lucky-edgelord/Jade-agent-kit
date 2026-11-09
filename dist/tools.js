@@ -1,5 +1,5 @@
-/*! Jade Agent Kit 0.5.0 | MIT | https://github.com/lucky-edgelord/Jade-agent-kit | bundles code under its own licenses: see THIRD_PARTY_NOTICES.md */
-import{a as x}from"./chunk-GVN33DFZ.js";import"./chunk-SMOWZWVS.js";var O=3e4,b=2e3,h=(a,c=O)=>(a=String(a??""),a.length<=c?a:a.slice(0,c/2)+`
+/*! Jade Agent Kit 3.0.0 | MIT | https://github.com/lucky-edgelord/Jade-agent-kit | bundles code under its own licenses: see THIRD_PARTY_NOTICES.md */
+import{a as x}from"./chunk-N3PD2AIR.js";import"./chunk-BN2DZAOB.js";var O=3e4,b=2e3,h=(a,c=O)=>(a=String(a??""),a.length<=c?a:a.slice(0,c/2)+`
 
 [\u2026 ${a.length-c} characters cut \u2026]
 

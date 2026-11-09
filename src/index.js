@@ -7,7 +7,7 @@
 import { VFS } from './vfs.js';
 import { setAssetsBase, getAssetsBase } from './util.js';
 
-export const VERSION = '0.5.0';
+export const VERSION = '3.0.0';
 const OLLAMA_LOCAL = 'http://localhost:11434';
 
 /** every feature: what kit.use(name) loads and how it is set up */

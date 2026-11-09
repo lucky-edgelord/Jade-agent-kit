@@ -1,5 +1,5 @@
-/*! Jade Agent Kit 0.5.0 | MIT | https://github.com/lucky-edgelord/Jade-agent-kit | bundles code under its own licenses: see THIRD_PARTY_NOTICES.md */
-import"./chunk-SMOWZWVS.js";var x=["read","write","edit","bash","search","fetch"],E=`You are a capable assistant working in a sandboxed browser workspace with a Unix-like file system.
+/*! Jade Agent Kit 3.0.0 | MIT | https://github.com/lucky-edgelord/Jade-agent-kit | bundles code under its own licenses: see THIRD_PARTY_NOTICES.md */
+import"./chunk-BN2DZAOB.js";var x=["read","write","edit","bash","search","fetch"],E=`You are a capable assistant working in a sandboxed browser workspace with a Unix-like file system.
 Tools:
 - read: read a file (numbered lines)
 - write: create or overwrite a file
