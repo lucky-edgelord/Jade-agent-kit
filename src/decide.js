@@ -56,10 +56,10 @@ export class Decisions {
   get name() { return NAMES[this.server] || this.server; }
   get base() {
     if (this.server === 'cloud') return OLLAMA_CLOUD;
-    if (this.server === 'ollama') return String(this.host || this.kit?.local?.host || OLLAMA_LOCAL).replace(/\/+$/, '');
+    if (this.server === 'ollama') return String(this.host || this.kit?.local?.host || this.kit?.config?.ollamaHost || OLLAMA_LOCAL).replace(/\/+$/, '');
     return String(this.host || OLLAYA_LOCAL).replace(/\/+$/, '');
   }
-  get key() { return this.server === 'cloud' ? (this.apiKey || this.kit?.ollama?.apiKey || '') : this.apiKey; }
+  get key() { return this.server === 'cloud' ? (this.apiKey || this.kit?.ollama?.apiKey || this.kit?.config?.ollamaKey || '') : this.apiKey; }
   get headers() { const h = { 'Content-Type': 'application/json' }; if (this.key) h.Authorization = 'Bearer ' + this.key; return h; }
   async _fetch(path, init = {}) {
     if (!['ollaya', 'ollama', 'cloud'].includes(this.server)) throw new Error(`unknown decision server "${this.server}": use ollaya, ollama or cloud`);

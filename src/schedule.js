@@ -46,10 +46,10 @@ export class Scheduler {
     this.running.add(job.id); const t0 = Date.now(); let result;
     try {
       const k = this.kit;
-      if (job.kind === 'shell') { const r = await k.shell.session({ cwd: job.cwd }).run(job.payload); result = { code: r.code, output: r.output }; }
-      else if (job.kind === 'js') { const r = await k.js.run(job.payload, { cwd: job.cwd }); result = { code: r.code, output: r.output, result: r.result }; }
-      else if (job.kind === 'python') { const r = await k.python.run(job.payload, { cwd: job.cwd }); result = { code: r.code, output: r.output }; }
-      else if (job.kind === 'agent') { const text = await k.agent({ ...(job.agent || {}) }).prompt(job.payload); result = { code: 0, output: text }; }
+      if (job.kind === 'shell') { const r = await (await k.use('shell')).session({ cwd: job.cwd }).run(job.payload); result = { code: r.code, output: r.output }; }
+      else if (job.kind === 'js') { const r = await (await k.use('js')).run(job.payload, { cwd: job.cwd }); result = { code: r.code, output: r.output, result: r.result }; }
+      else if (job.kind === 'python') { const r = await (await k.use('python')).run(job.payload, { cwd: job.cwd }); result = { code: r.code, output: r.output }; }
+      else if (job.kind === 'agent') { const text = await (await k.agent({ ...(job.agent || {}) })).prompt(job.payload); result = { code: 0, output: text }; }
       else if (job.kind === 'fn') { const f = this.fns.get(job.id); if (!f) throw new Error('this function job was added on another page load; add it again'); const v = await f(job); result = { code: 0, output: v === undefined ? '' : typeof v === 'string' ? v : JSON.stringify(v) }; }
       else throw new Error(`unknown job kind ${job.kind}`);
     } catch (e) { result = { code: 1, output: '', error: String(e?.message || e) }; }

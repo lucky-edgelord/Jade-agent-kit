@@ -34,7 +34,7 @@ ok(await ev(async () => { const db = await kit.sqlite.open('/db/test.db'); const
 // BM25
 r = await ev(() => kit.bm25.search(['the cat sat on the mat', 'my cat likes fish', 'a quick brown fox'], 'cat mat'));
 ok(r[0]?.id === 0 && r[1]?.id === 1 && r.length === 2, 'BM25 ranks: ' + JSON.stringify(r));
-r = await ev(() => { const i = new K.BM25(['apple banana cherry', 'banana cherry date', 'xray yak zebra', 'kiwi lime mango', 'plum pear fig']); return i.scores('banana').map(x => +x.toFixed(4)); });
+r = await ev(() => { const i = new kit.bm25.BM25(['apple banana cherry', 'banana cherry date', 'xray yak zebra', 'kiwi lime mango', 'plum pear fig']); return i.scores('banana').map(x => +x.toFixed(4)); });
 ok(r[0] > 0 && r[0] === r[1] && r[2] === 0 && r[3] === 0 && r[4] === 0, 'BM25 scores like rank_bm25: ' + JSON.stringify(r));
 r = await ev(() => kit.bm25.searchFiles('bananas'));
 ok(r[0]?.path === '/data/notes.txt', 'searchFiles finds files: ' + JSON.stringify(r));

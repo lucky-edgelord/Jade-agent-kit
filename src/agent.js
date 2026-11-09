@@ -21,6 +21,7 @@ export class Agent {
    */
   constructor({ kit, provider = null, ollama = null, model = null, system = SYSTEM, tools = DEFAULT_TOOLS, think = undefined, maxSteps = 40, options = undefined, onEvent = null }) {
     // which Ollama: one you pass, or 'cloud' / 'local' (default: the cloud when the kit has a key, else the local one)
+    // kit.tools and kit.ollama / kit.local are loaded by kit.agent() before this runs
     provider ||= kit.ollama.apiKey ? 'cloud' : 'local';
     this.client = ollama || (provider === 'cloud' ? kit.ollama : kit.local);
     model ||= this.client.cloud ? 'gpt-oss:120b' : 'qwen3:8b';

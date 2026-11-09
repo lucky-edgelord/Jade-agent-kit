@@ -66,8 +66,8 @@ export function createVectors(kit) {
      * @param {{ model?: string, table?: string, ollama?: import('./ollama.js').Ollama }} [o] model: an Ollama embedding model (default embeddinggemma)
      */
     async open(path = ':memory:', { model = 'embeddinggemma', table = 'docs', ollama = null } = {}) {
-      const db = await kit.sqlite.open(path);
-      const client = ollama || kit.local;
+      const db = await (await kit.use('sqlite')).open(path);
+      const client = ollama || (await kit.use('ollama')).local;
       return new VectorStore(db, (texts, o) => client.embed(texts, o), { model, table }).init();
     },
   };

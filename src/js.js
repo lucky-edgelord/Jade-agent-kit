@@ -8,7 +8,8 @@ const TF_USE = /\btf\s*\.\s*[A-Za-z_$]|@tensorflow\/tfjs/;
 
 export class JsRunner {
   /** @param {{ vfs, sqlite?: import('./sqlite.js').Sqlite, ml?: import('./ml.js').ML, bridge?: (op: string, args: object) => Promise<any> }} o */
-  constructor({ vfs, sqlite = null, ml = null, bridge = null }) { this.vfs = vfs; this.sqlite = sqlite; this.ml = ml; this.bridge = bridge; }
+  /** sqlite / ml may be objects or functions returning promises of them (loaded only when a script needs them) */
+  constructor({ vfs, sqlite = null, ml = null, bridge = null }) { this.vfs = vfs; this._sq = typeof sqlite === 'function' ? sqlite : sqlite ? async () => sqlite : null; this._ml = typeof ml === 'function' ? ml : ml ? async () => ml : null; this.bridge = bridge; }
   _changesSince(before) {
     const files = {}, deleted = [], dirs = [], rmdirs = [];
     for (const [p, n] of this.vfs.nodes) {
@@ -42,8 +43,8 @@ export class JsRunner {
     for (const [p, n] of vfs.nodes) { if (n.dir) dirs.push(p); else if (isSqliteBytes(n.data)) { bins[p] = n.data; files[p] = n.data; } else if (n.data.length < 2e6) files[p] = dec.decode(n.data); }
     const mentions = re => re.test(code) || [...vfs.nodes].some(([p, n]) => !n.dir && /\.[cm]?js$/.test(p) && n.data.length < 2e6 && re.test(dec.decode(n.data)));
     let sqMod = null, sqSrc = '', tfSrc = '';
-    if (this.sqlite && mentions(/sqlite/i)) { try { sqMod = await this.sqlite.module(); sqSrc = this.sqlite.glueSource; } catch (e) { return { stdout: '', stderr: `node: could not load SQLite (${e.message})\n`, code: 1 }; } }
-    if (this.ml && network && mentions(TF_USE)) { try { tfSrc = await this.ml.tfjsSource(); } catch (e) { return { stdout: '', stderr: `node: could not load TensorFlow.js (${e.message})\n`, code: 1 }; } }
+    if (this._sq && mentions(/sqlite/i)) { try { const sq = await this._sq(); sqMod = await sq.module(); sqSrc = sq.glueSource; } catch (e) { return { stdout: '', stderr: `node: could not load SQLite (${e.message})\n`, code: 1 }; } }
+    if (this._ml && network && mentions(TF_USE)) { try { tfSrc = await (await this._ml()).tfjsSource(); } catch (e) { return { stdout: '', stderr: `node: could not load TensorFlow.js (${e.message})\n`, code: 1 }; } }
     const names = globals ? Object.keys(globals).filter(k => /^[$A-Za-z_][\w$]*$/.test(k)) : [];
     const head = names.length ? `const { ${names.join(', ')} } = __globals;\n` : '';
     const src = NODE_PRELUDE + '\nconst kit = jade;\n' + `\nasync function __main() {\n${head}${code}\n}\n` + (sqSrc ? '\n' + sqSrc + '\n' : '')

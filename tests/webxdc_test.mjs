@@ -29,6 +29,6 @@ r = await ev(async () => { const a = await kit.webxdc.load('/test-list.xdc'); co
 ok(r.ok && r.zip, 'loads a .xdc zip and packs it back: ' + JSON.stringify(r));
 // updates persist
 await ev(() => new Promise(r => setTimeout(r, 300)));
-r = await ev(async () => { const k2 = await K.createKit({ persist: 'xdc-test', busybox: false }); const a = await k2.webxdc.load('/apps/counter'); return a.updates.length; });
+r = await ev(async () => { const k2 = await K.createKit({ persist: 'xdc-test', busybox: false }); const a = await (await k2.use('webxdc')).load('/apps/counter'); return a.updates.length; });
 ok(r === 3, 'updates persist with the kit: ' + r);
 await t.done();

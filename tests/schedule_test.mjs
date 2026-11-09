@@ -36,7 +36,7 @@ ok(/^Scheduled j\w+ hi · weekdays at 9:00 AM \(0 9 \* \* 1-5\)/.test(r[0]) && r
 // started by createKit, and catches up a run missed while the page was closed
 r = await ev(async () => {
   const S = kit.schedule; const j = S.find('stamp'); j.next = Date.now() - 60e3; S._save(); await kit.vfs.flush();
-  const k2 = await K.createKit({ persist: 'sched-test', busybox: false });
+  const k2 = await K.createKit({ persist: 'sched-test', busybox: false, use: ['schedule'] });
   await new Promise(r => setTimeout(r, 1500)); const l = k2.vfs.read('/log.txt'); const started = k2.schedule.started; k2.schedule.stop(); return { l, started };
 });
 ok(r.started && r.l === 'tick\ntick\ntick\n', 'a new page starts the scheduler and runs the missed job once: ' + JSON.stringify(r));

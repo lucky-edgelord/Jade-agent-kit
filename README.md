@@ -1,6 +1,7 @@
 # Jade Agent Kit
 
-A browser workspace for AI agents, loaded from a CDN with one import. It gives any web project:
+A browser workspace for AI agents, loaded from a CDN with one import. It is lean: the core is about 5 KB gzipped, and
+each feature below is its own module that downloads only when a page uses it. It gives any web project:
 
 - a **virtual file system** (in memory, optionally kept in IndexedDB) shared by everything below
 - a **shell**: BusyBox 1.37 compiled to WebAssembly, with pipes, redirects, `&&` `||`, `$VAR`, `$(…)` and globs, plus JavaScript versions of the common commands as a fallback
@@ -11,44 +12,82 @@ A browser workspace for AI agents, loaded from a CDN with one import. It gives a
 - a **webxdc** host for running `.xdc` apps in a sandboxed frame
 - **LLM tool definitions** (OpenAI/Ollama and Anthropic shapes) with one dispatcher
 - **decisions** with decision models on **Ollaya**, **Ollama** (0.35+) or **Ollama Cloud**: pick one, score, yes/no, with calibrated probabilities
+- **Sentry**: rules that watch the page and the device (battery, network, idle, keys, motion, light, location,
+  sound level, camera change, your own states and events) and act when something happens
 - a **cron scheduler** (plain English or cron) for shell, JS, Python, agent or function jobs, and a **task list**
 - **embeddings** from Ollama on your machine, and a **vector store** on sqlite-vec (semantic and hybrid search)
 - a small **pi-style agent** on **Ollama Cloud** or **Ollama on your machine**, with six tools: `read`, `write`, `edit`, `bash`, `search`, `fetch`
 
-Its pieces come from [Jade Vault](https://github.com/lucky-edgelord/jade-vault).
+Its pieces come from [Jade Vault](https://github.com/lucky-edgelord/jade-vault). The examples below use `kit.<feature>`
+after `await kit.use('<feature>')`.
 
 ## Quick start
 
 ```html
 <script type="module">
-  import { createKit } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.1.0/dist/jade-agent-kit.js';
+  import { createKit } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.2.0/dist/jade-agent-kit.js';
 
-  const kit = await createKit({ persist: 'my-app' });          // files kept in IndexedDB under "my-app"
+  const kit = await createKit({ persist: 'my-app' });          // loads only the file system; kept in IndexedDB
   kit.vfs.write('/hello.txt', 'hello world\n');
-  const r = await kit.run('cat /hello.txt | tr a-z A-Z');      // { stdout, stderr, code, output }
+  const r = await kit.run('cat /hello.txt | tr a-z A-Z');      // loads the shell and BusyBox, then runs
   console.log(r.stdout);                                        // HELLO WORLD
 </script>
 ```
 
-Always pin a version (`@v0.1.0`); jsDelivr caches tags permanently. `dist/jade-agent-kit.js` is one minified ES module
-(about 145 KB); `src/index.js` loads the same code as separate modules. Open `examples/index.html` for a shell and an agent
-side by side.
+Always pin a version (`@v0.2.0`); jsDelivr caches tags permanently. Open `examples/index.html` for a shell and an
+agent side by side.
 
-### What loads when
+## Lean loading
 
-| Piece | Size | Where from | When |
-| --- | --- | --- | --- |
-| The kit (`dist/jade-agent-kit.js`) | ~145 KB | this repository | the import |
-| BusyBox (`assets/busybox.wasm` + glue) | ~300 KB | this repository | at start (pass `busybox: false` to wait for the first command) |
-| SQLite + sqlite-vec (`assets/sqlite3.wasm`) | ~900 KB | this repository | first database, `sqlite3` command, or script that mentions sqlite |
-| MicroPython 1.27.0 | ~0.5 MB | jsDelivr | first Python run |
-| TensorFlow.js 4.22.0 | ~1.8 MB | jsDelivr | `kit.ml.tf()`, or a script that uses `tf` |
-| ONNX Runtime Web 1.31.1 | ~29 MB | jsDelivr | `kit.ml.onnx()` |
-| LiteRT.js 2.5.3 | ~10 MB | jsDelivr | `kit.ml.tflite()` |
+`createKit()` sets up the file system and nothing else. A feature is downloaded the first time it is used:
 
-The kit finds `assets/` next to the file you imported. To host everything yourself, copy `dist/` and `assets/`
-together, or pass `createKit({ assetsBase: '/static/jak-assets/' })`; `createKit({ cdn })` changes where the runtimes
-in the bottom four rows come from.
+```js
+const py = await kit.use('python');               // the Python runner (also kit.python from now on)
+const [db, bm] = await kit.use('sqlite', 'bm25');
+await createKit({ use: ['shell', 'sqlite'] });     // load some up front
+await createKit({ use: 'all' });                   // everything, like 0.1
+kit.has('python');                                 // loaded yet?
+```
+
+The helpers load what they need: `kit.run()` (shell), `kit.tool()` (tools + the feature behind the tool),
+`kit.decide()`, `kit.embed()`, `kit.agent()`. Every module also works on its own, without `createKit`:
+
+```js
+import { BM25 } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.2.0/dist/bm25.js';
+import { SentryEngine } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.2.0/dist/sentry-engine.js';
+```
+
+| Feature (`kit.use(…)`) | File | Size (gzip, with what it imports) |
+| --- | --- | --- |
+| core: `createKit`, file system | `jade-agent-kit.js` | 5.1 KB |
+| `shell` (+ `busybox`) | `shell.js`, `busybox.js` | 12.3 KB + 4.7 KB, then BusyBox's ~300 KB WebAssembly |
+| `js` | `js.js` | 13.1 KB |
+| `python` | `python.js` | 8.2 KB, then MicroPython (~0.5 MB) from jsDelivr |
+| `sqlite` | `sqlite.js` | 8.7 KB, then SQLite + sqlite-vec (~900 KB WebAssembly) |
+| `bm25` | `bm25.js` | 1.7 KB |
+| `ml` | `ml.js` | 4.4 KB, then each runtime from jsDelivr when used |
+| `webxdc` | `webxdc.js` | 9.0 KB |
+| `ollama` | `ollama.js` | 1.8 KB |
+| `vectors` | `vectors.js` | 3.1 KB (+ `sqlite`, `ollama`) |
+| `decisions` | `decide.js` | 4.1 KB |
+| `tasks`, `cron`, `schedule` | `tasks.js`, `schedule.js` | 1.0 KB, 4.8 KB |
+| `sentry` | `sentry.js` (engine alone: `sentry-engine.js`) | 9.5 KB (3.9 KB) |
+| `tools` | `tools.js` | 7.9 KB |
+| agent (`kit.agent()`) | `agent.js` | 1.4 KB (+ `tools`, `ollama`) |
+
+Shared code goes into small `chunk-*.js` files, so two features never download the same code twice. The kit finds
+`assets/` next to the file you imported; to host everything yourself, copy `dist/` and `assets/` together, or pass
+`createKit({ assetsBase: '/static/jak-assets/' })`; `createKit({ cdn })` changes where the runtimes loaded on demand
+come from.
+
+### Changes from 0.1
+
+- `createKit()` no longer loads every feature. Use `kit.use('…')` (or `createKit({ use: [...] })` / `'all'`) before
+  touching `kit.python`, `kit.sqlite`, `kit.webxdc`, …; the async helpers load by themselves.
+- `kit.agent()` is async: `const agent = await kit.agent({ … })`.
+- `createKit` exports only `createKit`, `VFS`, `setAssetsBase` and `getAssetsBase`; import other classes from their
+  module file (`dist/sqlite.js`, `dist/bm25.js`, …).
+- The scheduler starts when it is loaded (`use: ['schedule']` on pages that should run saved jobs).
 
 ## API
 
@@ -59,6 +98,8 @@ const kit = await createKit({
   ollamaKey: '…',               // Ollama Cloud: the agent on the cloud, web search and fetch
   ollamaHost: 'http://localhost:11434',   // Ollama on a machine: the agent and embeddings (this is the default)
   decide: { server: 'ollaya', model: 'winnow:e4b' },   // decision models: 'ollaya' | 'ollama' | 'cloud'
+  sentry: { allow: ['location'] },  // sensitive Sentry systems the app allows
+  use: ['shell'],               // features to load now (default: none)
 });
 ```
 
@@ -188,7 +229,7 @@ The servers speak different formats, and the kit translates both ways so the ans
 | Yes/no answer | a boolean | the probability of true (turned into yes/no + probabilities) | the same as Ollama |
 | Models | any it has | decision models such as `clef-flash` (`ollama pull`) | `clef` (paid plan or credits); `clef:cloud` is sent as `clef` |
 
-Scripts call `await kit.decide({ … })` too, and agents get a `decide` tool (`kit.agent({ tools: [...DEFAULT_TOOLS, 'decide'] })`).
+Scripts call `await kit.decide({ … })` too, and agents get a `decide` tool (`await kit.agent({ tools: [...DEFAULT_TOOLS, 'decide'] })`).
 
 ### Scheduling and tasks: `kit.schedule`, `kit.cron`, `kit.tasks`
 
@@ -215,7 +256,48 @@ kit.tasks.list({ status: 'pending' }); kit.tasks.text();     // [x] #1 Plan the 
 kit.tasks.on(items => render(items)); kit.tasks.clear();      // clear removes done tasks
 ```
 
-Agents get both as tools: `kit.agent({ tools: [...DEFAULT_TOOLS, 'tasks', 'schedule'] })`.
+Agents get both as tools: `await kit.agent({ tools: [...DEFAULT_TOOLS, 'tasks', 'schedule'] })` (`DEFAULT_TOOLS` is exported by `dist/agent.js`).
+
+### Sentry: `kit.sentry`
+
+Rules that watch the page and the device and act when something happens. The rules engine is the one Jade runs on
+a phone (ported from Rust, same tests), so a rule means the same in both places.
+
+```js
+const sentry = await kit.use('sentry');                 // starts watching; rules are kept in /.kit/sentry.json
+sentry.add({ id: 'low-battery', when: { src: 'battery.level', op: 'lt', value: 20, clear: 30 }, alert: { notify: 'Battery low' } });
+sentry.add({ id: 'away', when: { src: 'user.idle_s', op: 'gt', value: 300 }, run: { command: 'echo idle >> /log.txt' } });
+sentry.add({ id: 'big-order', on: { event: 'order', where: { total: { gt: 100 } } }, run: { prompt: 'Thank the customer' } });
+sentry.emit('order', { total: 140 });                   // your own events …
+sentry.set('cart.items', 3);                            // … and states
+sentry.on(fire => console.log(fire.id, fire.values, fire.event));
+sentry.allow('location');                               // camera, audio and location need this (and the browser's prompt)
+sentry.status(); sentry.disable('away'); sentry.remove('away'); sentry.stop();
+```
+
+A rule: `when` (a condition: `{ src, op: lt|le|gt|ge|eq|ne|in, value, clear }`, combined with `all` / `any` / `not`,
+or a geofence `{ src: 'geo', op: 'inside'|'outside', lat, lon, radius_m }`), and/or `on` (an event, filtered with
+`where`); `for_s` (must hold this long), `cooldown_s` (default 60), `max_per_hour` (default 30), `hours`
+(`"22:00-07:00"`), `rearm`. When it fires: `alert` (`notify`, `vibrate`), `run` (`command`, `js`, `python`, `prompt`,
+or `tool` + `args`; the firing's data is passed in as `sentry`), `snapshot` (camera rules keep a small grayscale picture).
+
+| System | Readings and events | Notes |
+| --- | --- | --- |
+| `time` | `time.hour`, `time.minute`, `time.weekday`, `time.day` | |
+| `battery` | `battery.level` (0-100), `battery.charging`; event `charger` | Chrome, Edge |
+| `network` | `net.online`, `net.type`, `net.downlink`; event `network` | |
+| `page` | `page.visible`, `page.focused`, `user.idle_s`; events `page`, `user_present` | |
+| `keys` | event `key` `{key, code, ctrl, alt, shift, meta}` | |
+| `files` | event `file` `{path}` | the kit's file system |
+| `motion` | `motion.state` (face_up/face_down/upright/tilted), `motion.moving`; event `shake` | iOS: call `requestPermissions()` from a tap |
+| `light` | `light.lux` | where the browser has AmbientLightSensor |
+| `location` | `geo.lat`, `geo.lon`, `geo.accuracy` | needs `allow('location')` |
+| `audio` | `audio.level` (0-100) | needs `allow('audio')`; nothing is recorded |
+| `camera` | `camera.change` (% of the picture), `camera.brightness` | needs `allow('camera')` |
+
+A system starts only when an enabled rule reads it and stops when none does, so unused sensors cost nothing.
+Phone-only events (calls, texts, notifications from other apps, Bluetooth, volume keys) have no browser source;
+rules on them are kept and can be fed with `emit()`. Agents get a `sentry` tool.
 
 ### Embeddings and vector search: `kit.embed`, `kit.vectors`
 
@@ -240,7 +322,7 @@ A store remembers which model embedded it and refuses another (vectors from diff
 ```js
 kit.tools.openai();                 // [{ type: 'function', function: { name, description, parameters } }] (also Ollama's format)
 kit.tools.anthropic(['read', 'bash']);  // [{ name, description, input_schema }]
-const text = await kit.tools.call('bash', { command: 'ls /' });   // always a string; failures start with "Error:"
+const text = await kit.tool('bash', { command: 'ls /' });         // always a string; failures start with "Error:"
 kit.tools.add('now', { description: 'the time', parameters: { type: 'object', properties: {} }, run: () => new Date().toISOString() });
 ```
 
@@ -256,6 +338,7 @@ kit.tools.add('now', { description: 'the time', parameters: { type: 'object', pr
 | `decide` | a decision model: choice, score or yes/no with probabilities |
 | `tasks` | the task list: add, update status, list, remove, clear |
 | `schedule` | schedule a command, JS, Python or agent prompt: add, list, remove, enable, disable, run |
+| `sentry` | Sentry rules: systems, list, add, remove, enable, disable, status, emit, set |
 | `search`, `fetch` | Ollama Cloud web search and web fetch (need an Ollama Cloud key) |
 
 ### The agent: `kit.agent()`
@@ -265,7 +348,7 @@ tools `read`, `write`, `edit`, `bash`, `search`, `fetch`.
 
 ```js
 const kit = await createKit({ ollamaKey: 'your Ollama Cloud key' });   // leave it out to use Ollama on your machine
-const agent = kit.agent({
+const agent = await kit.agent({
   provider: 'cloud',               // 'cloud' or 'local' (default: cloud when there is a key, else local)
   model: 'gpt-oss:120b',           // any model with tool support (default gpt-oss:120b on the cloud, qwen3:8b locally)
   onEvent: e => {                  // text / thinking (delta), tool_call, tool_result, turn_end, done, error
