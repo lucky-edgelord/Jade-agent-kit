@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Automation · Jade Agent Kit</title>
+<meta name="description" content="A lean, CDN-delivered browser workspace for AI agents: shell, files, Python, JavaScript, SQLite, search, memory, automation and a pi-style agent.">
+<link rel="stylesheet" href="assets/docs.css">
+<script>try{var t=localStorage.getItem('jak-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+<header class="top">
+  <button class="menu-btn" aria-label="Menu" aria-expanded="false" aria-controls="side">☰</button>
+  <a class="brand" href="index.html">Jade Agent Kit</a><span class="ver">v3.0.0</span>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs  ( / )" autocomplete="off" aria-label="Search the docs"><div id="results" role="listbox" hidden></div></div>
+  <button class="theme" aria-label="Toggle light and dark">Theme</button>
+  <a class="gh" href="https://github.com/lucky-edgelord/Jade-agent-kit">GitHub</a>
+</header>
+<div class="wrap">
+<aside id="side"><div class="grp"><h2>Start</h2><ul><li><a href="index.html">Jade Agent Kit</a></li><li><a href="quick-start.html">Quick start</a></li><li><a href="lean-loading.html">Lean loading</a></li></ul></div>
+<div class="grp"><h2>Guides</h2><ul><li><a href="create-kit.html">createKit options</a></li><li><a href="files.html">Files: kit.vfs</a></li><li><a href="shell.html">Shell: kit.run, kit.shell</a></li><li><a href="python.html">Python: kit.python</a></li><li><a href="javascript.html">JavaScript: kit.js</a></li><li><a href="sqlite.html">SQLite: kit.sqlite</a></li><li><a href="bm25.html">BM25: kit.bm25</a></li><li><a href="machine-learning.html">Machine learning: kit.ml</a></li><li><a href="webxdc.html">webxdc: kit.webxdc</a></li><li><a href="decisions.html">Decisions: kit.decide, kit.decisions</a></li><li><a href="scheduling-and-tasks.html">Scheduling and tasks: kit.schedule, kit.cron, kit.tasks</a></li><li><a href="sentry.html">Sentry: kit.sentry</a></li><li><a href="embeddings-and-vector-search.html">Embeddings and vector search: kit.embed, kit.vectors</a></li><li><a href="tools-for-llms.html">Tools for LLMs: kit.tools</a></li><li><a href="the-agent.html">The agent: kit.agent()</a></li><li><a href="the-agent-brain.html">The agent brain: kit.agent({ brain })</a></li><li><a href="automation.html" aria-current="page">Automation</a></li><li><a href="notes-senses-and-devices.html">Notes, senses and devices</a></li></ul></div>
+<div class="grp"><h2>Reference</h2><ul><li><a href="features.html">Features and sizes</a></li><li><a href="tools.html">Tools</a></li><li class="mods"><details><summary>Modules</summary><ul><li><a href="module-jade-agent-kit.html">jade-agent-kit</a></li><li><a href="module-agent.html">agent</a></li><li><a href="module-autonomy.html">autonomy</a></li><li><a href="module-backup.html">backup</a></li><li><a href="module-bm25.html">bm25</a></li><li><a href="module-brain.html">brain</a></li><li><a href="module-busybox.html">busybox</a></li><li><a href="module-curiosity.html">curiosity</a></li><li><a href="module-decide.html">decide</a></li><li><a href="module-delegate.html">delegate</a></li><li><a href="module-flows.html">flows</a></li><li><a href="module-gantt.html">gantt</a></li><li><a href="module-guard.html">guard</a></li><li><a href="module-heartbeat.html">heartbeat</a></li><li><a href="module-history.html">history</a></li><li><a href="module-http.html">http</a></li><li><a href="module-js.html">js</a></li><li><a href="module-knowledge.html">knowledge</a></li><li><a href="module-lisp.html">lisp</a></li><li><a href="module-mcp.html">mcp</a></li><li><a href="module-memory.html">memory</a></li><li><a href="module-ml.html">ml</a></li><li><a href="module-notes.html">notes</a></li><li><a href="module-ollama.html">ollama</a></li><li><a href="module-playbooks.html">playbooks</a></li><li><a href="module-python.html">python</a></li><li><a href="module-router.html">router</a></li><li><a href="module-schedule.html">schedule</a></li><li><a href="module-secrets.html">secrets</a></li><li><a href="module-senses.html">senses</a></li><li><a href="module-sentry.html">sentry</a></li><li><a href="module-sentry-engine.html">sentry-engine</a></li><li><a href="module-shell.html">shell</a></li><li><a href="module-skills.html">skills</a></li><li><a href="module-sqlite.html">sqlite</a></li><li><a href="module-tasks.html">tasks</a></li><li><a href="module-think.html">think</a></li><li><a href="module-tools.html">tools</a></li><li><a href="module-usb.html">usb</a></li><li><a href="module-vectors.html">vectors</a></li><li><a href="module-vfs.html">vfs</a></li><li><a href="module-webxdc.html">webxdc</a></li></ul></details></li></ul></div>
+<div class="grp"><h2>More</h2><ul><li><a href="things-to-know.html">Things to know</a></li><li><a href="development.html">Development</a></li><li><a href="license.html">License</a></li><li><a href="changelog.html">Changelog</a></li></ul></div></aside>
+<main>
+<article>
+<p>Each part is its own feature (<code>kit.use(&#39;flows&#39;)</code>, …) with a tool for agents (<code>kit.agent({ brain: [&#39;flows&#39;] })</code> adds it).
+Files live under <code>/.kit/</code>; options come from <code>createKit({ &lt;part&gt;: {…} })</code>.</p>
+<pre><code class="language-js"><span class="k">const</span> kit = <span class="k">await</span> createKit({ persist: <span class="s">'my-app'</span>, secrets: { WEATHER_KEY: <span class="s">'…'</span> },
+  playbooks: { approve: <span class="k">async</span> ({ name, summary }) =&gt; confirm(<span class="s">`Allow playbook ${name}? ${summary.modules}`</span>) } });
+<span class="k">const</span> flows = <span class="k">await</span> kit.use(<span class="s">'flows'</span>);
+flows.save({ name: <span class="s">'Digest'</span>, trigger: { type: <span class="s">'schedule'</span>, when: <span class="s">'every day at 18:00'</span> }, steps: [
+  { type: <span class="s">'file'</span>, action: <span class="s">'read'</span>, path: <span class="s">'/inbox.md'</span> },
+  { type: <span class="s">'llm'</span>, prompt: <span class="s">'Summarise in 3 bullets:\n{{ $json }}'</span> },
+  { type: <span class="s">'notify'</span>, title: <span class="s">'Digest'</span>, body: <span class="s">'{{ $json }}'</span> }] });
+<span class="k">await</span> flows.run(<span class="s">'Digest'</span>);
+</code></pre>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Tool</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>flows</code></td>
+<td><code>flow</code></td>
+<td>n8n-style flows in <code>/.kit/flows/*.flow.json</code>: tool, js, shell, decide, llm, agent, file, set, if, switch, each, wait, notify, playbook, flow and stop steps, <code>{{ expressions }}</code> in a sandboxed worker, and manual, schedule or file-change triggers. <code>flows.run(name, input)</code>, <code>flows.on(run =&gt; …)</code>.</td>
+</tr>
+<tr>
+<td><code>playbooks</code></td>
+<td><code>playbook</code></td>
+<td>Ansible-style task lists with no model in the loop: when, loop, register, retries/until, block/rescue/always, assert, tags, secrets (redacted from logs), allow_hosts. A playbook runs unattended only after your app approves it (<code>playbooks.approve(name)</code> or an <code>approve</code> callback), and again after any change; an agent can save one but never approve it.</td>
+</tr>
+<tr>
+<td><code>gantt</code></td>
+<td><code>gantt</code></td>
+<td>Projects with dependencies, milestones, owners (<code>agent</code> or <code>user</code>), progress, the critical path and a text chart. The user&#39;s tasks are theirs.</td>
+</tr>
+<tr>
+<td><code>autonomy</code></td>
+<td><code>autonomy</code></td>
+<td>A work queue: interrupts, priorities with aging and deadlines, long goals in slices with feedback levels. <code>autonomy.enable(true)</code> runs it within budgets (steps per hour and day), quiet hours and pauses while the user is active; tools on the deny list wait for <code>autonomy.allow(id)</code>. The agent&#39;s ready Gantt tasks join it.</td>
+</tr>
+<tr>
+<td><code>heartbeat</code></td>
+<td><code>heartbeat</code></td>
+<td>Every N minutes in active hours an agent checks <code>/.kit/HEARTBEAT.md</code>; <code>HEARTBEAT_OK</code> is silent, anything else calls <code>onAlert</code> and <code>kit.notify</code>. An empty checklist skips without calling the model.</td>
+</tr>
+<tr>
+<td><code>curiosity</code></td>
+<td><code>curiosity</code></td>
+<td>Random wake-ups: an agent picks an activity (explore, reflect, connect, practice, anticipate, ask, rest) ranked by learning progress, works a little and reports; the reward is measured from the files it changed.</td>
+</tr>
+<tr>
+<td><code>secrets</code></td>
+<td><code>secrets</code></td>
+<td>API keys your app hands the kit, kept out of the file system; agents see names only and use them as <code>{{ NAME }}</code> in playbooks.</td>
+</tr>
+<tr>
+<td><code>lisp</code></td>
+<td><code>lisp</code></td>
+<td>Jade Lisp: a Scheme/Clojure-style Lisp in the JavaScript sandbox, with every tool as <code>(tool/NAME …)</code>, macros and fuel-limited sandboxes for DSLs.</td>
+</tr>
+</tbody></table></div>
+<p><code>kit.notify(title, body)</code> reaches the user: <code>createKit({ notify })</code>, else a browser notification when permitted. Agent
+plugins can now also answer a tool call themselves with <code>beforeTool(agent, { name, args })</code>, which is how approval gates work.</p>
+
+</article>
+<nav class="pager" aria-label="Pages"><a class="prev" href="the-agent-brain.html"><span>Previous</span>The agent brain: kit.agent({ brain })</a><a class="next" href="notes-senses-and-devices.html"><span>Next</span>Notes, senses and devices</a></nav>
+<footer>Jade Agent Kit v3.0.0 · MIT · <a href="https://github.com/lucky-edgelord/Jade-agent-kit/blob/main/README.md">Edit the source</a> · generated by <code>scripts/docs.mjs</code></footer>
+</main>
+</div>
+<script src="assets/docs.js" defer></script>
+</body>
+</html>

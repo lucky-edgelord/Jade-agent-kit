@@ -18,5 +18,9 @@ jobs:
         run: |
           node scripts/build.mjs
           git diff --exit-code -- dist || (echo "dist/ is out of date: run npm run build and commit it" && exit 1)
+      - name: generate the docs and check docs/ is up to date
+        run: |
+          node scripts/docs.mjs
+          git diff --exit-code -- docs || (echo "docs/ is out of date: run npm run docs and commit it" && exit 1)
       - run: node tests/run.mjs
       - run: JAK_SRC=1 node tests/run.mjs

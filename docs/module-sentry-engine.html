@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sentry-engine.js · Jade Agent Kit</title>
+<meta name="description" content="A lean, CDN-delivered browser workspace for AI agents: shell, files, Python, JavaScript, SQLite, search, memory, automation and a pi-style agent.">
+<link rel="stylesheet" href="assets/docs.css">
+<script>try{var t=localStorage.getItem('jak-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+<header class="top">
+  <button class="menu-btn" aria-label="Menu" aria-expanded="false" aria-controls="side">☰</button>
+  <a class="brand" href="index.html">Jade Agent Kit</a><span class="ver">v3.0.0</span>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs  ( / )" autocomplete="off" aria-label="Search the docs"><div id="results" role="listbox" hidden></div></div>
+  <button class="theme" aria-label="Toggle light and dark">Theme</button>
+  <a class="gh" href="https://github.com/lucky-edgelord/Jade-agent-kit">GitHub</a>
+</header>
+<div class="wrap">
+<aside id="side"><div class="grp"><h2>Start</h2><ul><li><a href="index.html">Jade Agent Kit</a></li><li><a href="quick-start.html">Quick start</a></li><li><a href="lean-loading.html">Lean loading</a></li></ul></div>
+<div class="grp"><h2>Guides</h2><ul><li><a href="create-kit.html">createKit options</a></li><li><a href="files.html">Files: kit.vfs</a></li><li><a href="shell.html">Shell: kit.run, kit.shell</a></li><li><a href="python.html">Python: kit.python</a></li><li><a href="javascript.html">JavaScript: kit.js</a></li><li><a href="sqlite.html">SQLite: kit.sqlite</a></li><li><a href="bm25.html">BM25: kit.bm25</a></li><li><a href="machine-learning.html">Machine learning: kit.ml</a></li><li><a href="webxdc.html">webxdc: kit.webxdc</a></li><li><a href="decisions.html">Decisions: kit.decide, kit.decisions</a></li><li><a href="scheduling-and-tasks.html">Scheduling and tasks: kit.schedule, kit.cron, kit.tasks</a></li><li><a href="sentry.html">Sentry: kit.sentry</a></li><li><a href="embeddings-and-vector-search.html">Embeddings and vector search: kit.embed, kit.vectors</a></li><li><a href="tools-for-llms.html">Tools for LLMs: kit.tools</a></li><li><a href="the-agent.html">The agent: kit.agent()</a></li><li><a href="the-agent-brain.html">The agent brain: kit.agent({ brain })</a></li><li><a href="automation.html">Automation</a></li><li><a href="notes-senses-and-devices.html">Notes, senses and devices</a></li></ul></div>
+<div class="grp"><h2>Reference</h2><ul><li><a href="features.html">Features and sizes</a></li><li><a href="tools.html">Tools</a></li><li class="mods"><details open><summary>Modules</summary><ul><li><a href="module-jade-agent-kit.html">jade-agent-kit</a></li><li><a href="module-agent.html">agent</a></li><li><a href="module-autonomy.html">autonomy</a></li><li><a href="module-backup.html">backup</a></li><li><a href="module-bm25.html">bm25</a></li><li><a href="module-brain.html">brain</a></li><li><a href="module-busybox.html">busybox</a></li><li><a href="module-curiosity.html">curiosity</a></li><li><a href="module-decide.html">decide</a></li><li><a href="module-delegate.html">delegate</a></li><li><a href="module-flows.html">flows</a></li><li><a href="module-gantt.html">gantt</a></li><li><a href="module-guard.html">guard</a></li><li><a href="module-heartbeat.html">heartbeat</a></li><li><a href="module-history.html">history</a></li><li><a href="module-http.html">http</a></li><li><a href="module-js.html">js</a></li><li><a href="module-knowledge.html">knowledge</a></li><li><a href="module-lisp.html">lisp</a></li><li><a href="module-mcp.html">mcp</a></li><li><a href="module-memory.html">memory</a></li><li><a href="module-ml.html">ml</a></li><li><a href="module-notes.html">notes</a></li><li><a href="module-ollama.html">ollama</a></li><li><a href="module-playbooks.html">playbooks</a></li><li><a href="module-python.html">python</a></li><li><a href="module-router.html">router</a></li><li><a href="module-schedule.html">schedule</a></li><li><a href="module-secrets.html">secrets</a></li><li><a href="module-senses.html">senses</a></li><li><a href="module-sentry.html">sentry</a></li><li><a href="module-sentry-engine.html" aria-current="page">sentry-engine</a></li><li><a href="module-shell.html">shell</a></li><li><a href="module-skills.html">skills</a></li><li><a href="module-sqlite.html">sqlite</a></li><li><a href="module-tasks.html">tasks</a></li><li><a href="module-think.html">think</a></li><li><a href="module-tools.html">tools</a></li><li><a href="module-usb.html">usb</a></li><li><a href="module-vectors.html">vectors</a></li><li><a href="module-vfs.html">vfs</a></li><li><a href="module-webxdc.html">webxdc</a></li></ul></details></li></ul></div>
+<div class="grp"><h2>More</h2><ul><li><a href="things-to-know.html">Things to know</a></li><li><a href="development.html">Development</a></li><li><a href="license.html">License</a></li><li><a href="changelog.html">Changelog</a></li></ul></div></aside>
+<main>
+<article>
+<h1><code>sentry-engine.js</code></h1>
+<dl class="facts"><dt>Source</dt><dd><a href="https://github.com/lucky-edgelord/Jade-agent-kit/blob/main/src/sentry_engine.js"><code>src/sentry_engine.js</code></a></dd><dt>Size</dt><dd>4.2 KB gzipped (9.6 KB raw), with the chunks it imports</dd></dl>
+<p>Sentry's rules engine: a JavaScript port of Jade's Rust engine (rust/core/src/sentry.rs), so a rule means the same on a phone and in a browser. No I/O and no clock of its own: every call carries <code>now</code> (ms) and the host drives it.</p>
+<p>A trigger is { id, when?, on?, for_s, cooldown_s, max_per_hour, hours, rearm, ... }: - <code>when</code> is a state condition: all / any / not over leaves { src, op, value, clear }. A leaf with <code>clear</code> is a</p>
+<pre><code> hysteresis band: it turns on at `value` and only turns off at `clear`, so a reading hovering at the threshold
+ does not flap. Leaves: ops lt le gt ge eq ne in; { src: 'geo', op: 'inside'|'outside', lat, lon, radius_m, clear_m }.</code></pre>
+<p>- a state trigger (no <code>on</code>) fires on the edge, once its condition has held for <code>for_s</code> seconds; it fires again only</p>
+<pre><code> after the condition clears (rearm &quot;clear&quot;, the default) or the cooldown passes while it holds (rearm &quot;cooldown&quot;).</code></pre>
+<p>- an event trigger (<code>on: { event, where }</code>) fires when a matching event arrives while <code>when</code> holds. - guards on both: cooldown_s, max_per_hour, and active hours (&quot;22:00-07:00&quot;). - after (re)configuring, a condition that is already true is a baseline, not an edge.</p>
+<p>On its own, without <code>createKit</code>:</p>
+<pre><code><span class="k">import</span> * as m <span class="k">from</span> <span class="s">'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v3.0.0/dist/sentry-engine.js'</span>;</code></pre>
+<h2 id="api-reference" class="plain">Documented API</h2>
+<p>Methods with a doc comment in the source. The <a href="https://github.com/lucky-edgelord/Jade-agent-kit/blob/main/src/sentry_engine.js">source</a> has the rest.</p>
+<h2 id="functions">Functions</h2>
+<h3 id="functions-matches"><code>matches(on, name, d = {})</code><a class="anchor" href="#functions-matches" aria-label="Link to this member">#</a></h3>
+<p>does an event match a trigger's <code>on</code>? on.event is a name or a list; on.where filters its data</p>
+<h2 id="sentryengine"><code>SentryEngine</code></h2>
+<h3 id="sentryengine-configure"><code>configure(rules)</code><a class="anchor" href="#sentryengine-configure" aria-label="Link to this member">#</a></h3>
+<p>replace the rules ({ triggers: [...] } or its JSON); unchanged triggers keep their state. Returns problems found</p>
+<h3 id="sentryengine-touch"><code>touch(now)</code><a class="anchor" href="#sentryengine-touch" aria-label="Link to this member">#</a></h3>
+<p>the user did something: resets user.idle_s</p>
+<h3 id="sentryengine-sources"><code>sources()</code><a class="anchor" href="#sentryengine-sources" aria-label="Link to this member">#</a></h3>
+<p>which sources the enabled rules read (&quot;battery.level&quot;, &quot;geo&quot;, &quot;event:shake&quot;, …)</p>
+<h3 id="sentryengine-nextwakems"><code>nextWakeMs(now)</code><a class="anchor" href="#sentryengine-nextwakems" aria-label="Link to this member">#</a></h3>
+<p>ms until something needs re-evaluating with no new input, or -1</p>
+</article>
+
+<footer>Jade Agent Kit v3.0.0 · MIT · <a href="https://github.com/lucky-edgelord/Jade-agent-kit/blob/main/src/sentry_engine.js">Edit the source</a> · generated by <code>scripts/docs.mjs</code></footer>
+</main>
+</div>
+<script src="assets/docs.js" defer></script>
+</body>
+</html>
