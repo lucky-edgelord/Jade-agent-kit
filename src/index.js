@@ -7,7 +7,7 @@
 import { VFS } from './vfs.js';
 import { setAssetsBase, getAssetsBase } from './util.js';
 
-export const VERSION = '0.3.0';
+export const VERSION = '0.4.0';
 const OLLAMA_LOCAL = 'http://localhost:11434';
 
 /** every feature: what kit.use(name) loads and how it is set up */
@@ -44,11 +44,20 @@ const FEATURES = {
   history: brain(async k => new (await import('./history.js')).History({ kit: k, ...k.config.history })),
   guard: brain(async k => new (await import('./guard.js')).ContextGuard({ kit: k, ...k.config.guard })),
   router: brain(async k => { await k.use('tools'); return new (await import('./router.js')).ToolRouter({ kit: k, ...k.config.router }); }),
+  // automation: each adds its tool; options from createKit({ flows: {…}, … })
+  secrets: brain(async k => { const { Secrets } = await import('./secrets.js'); const x = new Secrets({ persist: k.config.persist, values: k.config.secrets }); await x.ready; return x; }),
+  flows: brain(async k => { const f = new (await import('./flows.js')).Flows({ kit: k, ...k.config.flows }); if (k.config.flows?.start !== false) f.start(); return f; }),
+  playbooks: brain(async k => new (await import('./playbooks.js')).Playbooks({ kit: k, ...k.config.playbooks })),
+  gantt: brain(async k => new (await import('./gantt.js')).Gantt({ kit: k, ...k.config.gantt })),
+  autonomy: brain(async k => new (await import('./autonomy.js')).Autonomy({ kit: k, ...k.config.autonomy })),
+  heartbeat: brain(async k => { const h = new (await import('./heartbeat.js')).Heartbeat({ kit: k, ...k.config.heartbeat }); if (k.config.heartbeat?.start) h.start(); return h; }),
+  curiosity: brain(async k => { const c = new (await import('./curiosity.js')).Curiosity({ kit: k, ...k.config.curiosity }); if (k.config.curiosity?.start) c.start(); return c; }),
+  lisp: brain(async k => new (await import('./lisp.js')).Lisp({ kit: k, ...k.config.lisp })),
   models: brain(async k => new (await import('./router.js')).ModelRouter({ kit: k, ...(Array.isArray(k.config.models) ? { models: k.config.models } : k.config.models) })),
 };
 // a brain feature's tools join the kit's tool list (now, or when the tools load)
 function brain(make) { return async k => { const f = await make(k); const d = f.toolDefs; if (d) { k._toolDefs.push(d); k.tools?.addAll(d); } return f; }; }
-const ALIASES = { decide: 'decisions', schedules: 'schedule', scheduler: 'schedule', node: 'js', javascript: 'js', db: 'sqlite', kg: 'knowledge', steering: 'skills', 'tool-router': 'router', 'model-router': 'models', context: 'guard', chats: 'history' };
+const ALIASES = { decide: 'decisions', schedules: 'schedule', scheduler: 'schedule', node: 'js', javascript: 'js', db: 'sqlite', kg: 'knowledge', steering: 'skills', playbook: 'playbooks', flow: 'flows', plans: 'gantt', sched: 'autonomy', queue: 'autonomy', 'tool-router': 'router', 'model-router': 'models', context: 'guard', chats: 'history' };
 export const FEATURE_NAMES = Object.keys(FEATURES);
 const KEEP = new Set(['agent', 'ollama']);   // kit.agent() stays the helper; ollama sets kit.ollama (the cloud) and kit.local itself
 
@@ -58,6 +67,12 @@ async function bridge(k, op, a) {
   if (op === 'list') return (await k.use('tools')).names();
   if (op === 'decide') return k.decide(a);
   if (op === 'shell') { const r = await (await k.use('shell')).session().run(a.command); return { stdout: r.stdout, stderr: r.stderr, code: r.code }; }
+  if (op === 'ask') return k.complete({ prompt: a.prompt, system: a.system, json: !!a.json });
+  if (op === 'agent') { const ag = await k.agent({ brain: a.brain }); return ag.prompt(a.message); }
+  if (op === 'flow') { const r = await (await k.use('flows')).run(a.name, a.input); if (r.status !== 'ok') throw new Error(`flow "${a.name}" ${r.status}: ${r.error}`); return r.output; }
+  if (op === 'flows') return (await k.use('flows')).list().map(f => ({ name: f.name, description: f.description || '', trigger: f.trigger || { type: 'manual' } }));
+  if (op === 'notify') { await k.notify(a.title, a.body); return true; }
+  if (op === 'kv') { const p = '/.kit/kv.json'; let o = {}; try { o = JSON.parse(k.vfs.read(p)); } catch {} if (a.op === 'get') return o[a.k] ?? null; if (a.op === 'all') return o; o[a.k] = a.v; k.vfs.write(p, JSON.stringify(o)); return true; }
   throw new Error(`kit.${op} is not available in Jade Agent Kit`);
 }
 
@@ -126,6 +141,12 @@ export async function createKit(o = {}) {
       const a = new m.Agent({ kit, ...opts, plugins });
       if (opts.resume) { const c = (await kit.use('history')).load(opts.resume); Object.assign(a, { id: c.id, title: c.title, messages: c.messages }); }
       return a;
+    },
+    /** tell the user: createKit({ notify(title, body) }), else a browser notification when permitted, else the console */
+    async notify(title, body = '') {
+      if (typeof kit.config.notify === 'function') return kit.config.notify(String(title), String(body));
+      try { if (globalThis.Notification?.permission === 'granted') { new Notification(String(title), { body: String(body) }); return; } } catch {}
+      console.info(`[notify] ${title}${body ? ': ' + body : ''}`);
     },
     /** one answer from the kit's model, not streamed: await kit.complete({ prompt | messages, system, json }) */
     async complete(o) { return (await import('./internal/llm.js')).complete(kit, o); },

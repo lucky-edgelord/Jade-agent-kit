@@ -5,7 +5,7 @@ const { ok, ev, requests, from } = t;
 const dist = !from.startsWith('src/');
 const kitFiles = () => requests.filter(u => u.startsWith('https://kit.test/') && /\.(js|wasm)$/.test(u)).map(u => new URL(u).pathname);
 let files = kitFiles();
-ok(await ev(() => Object.keys(kit).filter(k => !['version', 'config', 'vfs', 'features', 'has', 'use', 'run', 'tool', 'decide', 'embed', 'agent', 'complete'].includes(k)).length) === 0, 'createKit() sets up only the file system and the helpers');
+ok(await ev(() => Object.keys(kit).filter(k => !['version', 'config', 'vfs', 'features', 'has', 'use', 'run', 'tool', 'decide', 'embed', 'agent', 'complete', 'notify'].includes(k)).length) === 0, 'createKit() sets up only the file system and the helpers');
 if (dist) ok(files.every(f => /^\/dist\/(jade-agent-kit|chunk-[A-Z0-9]+)\.js$/.test(f)) && !files.some(f => /shell|python|sqlite|busybox/.test(f)), 'only the core was downloaded: ' + files.join(' '));
 await ev(() => kit.run('echo hi'));
 files = kitFiles();
