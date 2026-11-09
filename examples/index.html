@@ -40,17 +40,19 @@
   </section>
 </main>
 <script type="module">
-  // In your own project: import { createKit } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.1.0/dist/jade-agent-kit.js';
+  // In your own project: import { createKit } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.2.0/dist/jade-agent-kit.js';
   import { createKit } from '../dist/jade-agent-kit.js';
   const $ = id => document.getElementById(id);
   const out = (el, text, cls) => { const s = document.createElement('span'); if (cls) s.className = cls; s.textContent = text; el.append(s); el.scrollTop = el.scrollHeight; };
+  // only the file system loads here; the shell (and BusyBox) load with the first command, the agent with the first message
   const kit = await createKit({ persist: 'demo', files: { '/README.md': '# Welcome\nThis file system is kept in your browser.\n' } });
   window.kit = kit;
-  kit.busybox.load().then(okk => { $('status').textContent = okk ? `BusyBox ${kit.busybox.applets.size} applets · ${kit.vfs.nodes.size} files` : 'JS shell (BusyBox unavailable)'; });
+  $('status').textContent = `core loaded · ${kit.vfs.nodes.size} files`;
+  const showShell = () => { if (kit.busybox?.ready) $('status').textContent = `BusyBox ${kit.busybox.applets.size} applets · ${kit.vfs.nodes.size} files`; };
   $('shForm').onsubmit = async e => {
     e.preventDefault(); const cmd = $('shIn').value; if (!cmd.trim()) return; $('shIn').value = '';
     out($('term'), `$ ${cmd}\n`, 'cmd');
-    await kit.sh.run(cmd, { onOutput: (t, isErr) => out($('term'), t, isErr ? 'err' : '') });
+    await kit.run(cmd, { onOutput: (t, isErr) => out($('term'), t, isErr ? 'err' : '') }); showShell();
   };
   try { $('key').value = localStorage.getItem('jak-key') || ''; } catch {}
   const agents = {};   // one per provider, each with its own history
@@ -62,9 +64,9 @@
   };
   $('agForm').onsubmit = async e => {
     e.preventDefault(); const text = $('agIn').value.trim(); if (!text) return;
-    kit.ollama.apiKey = $('key').value.trim(); try { localStorage.setItem('jak-key', kit.ollama.apiKey); } catch {}
+    await kit.use('ollama'); kit.ollama.apiKey = $('key').value.trim(); try { localStorage.setItem('jak-key', kit.ollama.apiKey); } catch {}
     const provider = kit.ollama.apiKey ? 'cloud' : 'local';
-    const agent = agents[provider] ||= kit.agent({ provider, onEvent });
+    const agent = agents[provider] ||= await kit.agent({ provider, onEvent });
     if ($('model').value.trim()) agent.model = $('model').value.trim();
     $('agIn').value = ''; $('agBtn').disabled = true; out($('chat'), `\n> ${text}  (${agent.model} on ${agent.client.name})\n`, 'cmd');
     try { await agent.prompt(text); out($('chat'), '\n'); } catch (err) { out($('chat'), `\n${err.message}\n`, 'err'); } finally { $('agBtn').disabled = false; }

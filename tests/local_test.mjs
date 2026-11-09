@@ -39,10 +39,10 @@ ok(r.hy === 'rust' && r.n === 3 && r.n2 === 2 && r.after === 'tea' && r.cnt === 
 r = await ev(async () => { const s = await kit.vectors.open('/data/vec.db', { model: 'other' }).catch(e => e.message); return typeof s === 'string' ? s : 'opened'; });
 ok(/embedded with embeddinggemma/.test(r), 'a store refuses a different embedding model: ' + r);
 // the agent on the local Ollama (no cloud key → local)
-r = await ev(async () => { const a = kit.agent(); const text = await a.prompt('hi'); return { text, model: a.model, host: a.client.host }; });
+r = await ev(async () => { const a = await kit.agent(); const text = await a.prompt('hi'); return { text, model: a.model, host: a.client.host }; });
 ok(r.text === 'local: from-local' && r.model === 'qwen3:8b' && r.host === 'http://localhost:11434', 'with no cloud key the agent uses the local Ollama: ' + JSON.stringify(r));
 ok(seen.some(s => s.path === '/api/chat' && s.body.model === 'qwen3:8b' && s.body.tools.length === 6), 'the local chat gets the six tools');
-r = await ev(async () => { const a = kit.agent({ provider: 'cloud' }); try { await a.prompt('x'); return 'no error'; } catch (err) { return err.message; } });
+r = await ev(async () => { const a = await kit.agent({ provider: 'cloud' }); try { await a.prompt('x'); return 'no error'; } catch (err) { return err.message; } });
 ok(/no Ollama Cloud API key/.test(r), 'the cloud agent without a key explains: ' + r);
 r = await ev(() => kit.tools.call('search', { query: 'x' }));
 ok(/^Error: no Ollama Cloud API key/.test(r), 'web search still needs the cloud key: ' + r);

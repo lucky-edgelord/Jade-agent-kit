@@ -2,13 +2,14 @@
 // same files as the shell and JS, and changes are written back. `import sqlite3` works (on the kit's SQLite).
 // The runtime (~0.5 MB) is downloaded from jsDelivr the first time Python runs.
 import { mpyClassic, MPY_COMPAT, MPY_WORKER } from './internal/mpy_worker.js';
-import { SQLITE_PY_BRIDGE, SQLITE_PY_SHIM } from './internal/sqlite_extras.js';
+import { SQLITE_PY_BRIDGE, SQLITE_PY_SHIM } from './internal/sqlite_py.js';
 import { dec, b64enc, fetchBytes, fetchText, isWasm, workerRun } from './util.js';
 
 export const MPY_VERSION = '1.27.0';
 
 export class Python {
-  constructor({ vfs, sqlite = null, cdn = 'https://cdn.jsdelivr.net/npm/' }) { this.vfs = vfs; this.sqlite = sqlite; this.base = `${cdn}@micropython/micropython-webassembly-pyscript@${MPY_VERSION}/`; this._p = null; }
+  /** @param {{ vfs, sqlite?: Sqlite | (() => Promise<Sqlite>), cdn?: string }} o  sqlite: for `import sqlite3` (loaded only when code mentions it) */
+  constructor({ vfs, sqlite = null, cdn = 'https://cdn.jsdelivr.net/npm/' }) { this.vfs = vfs; this._sq = typeof sqlite === 'function' ? sqlite : sqlite ? async () => sqlite : null; this.base = `${cdn}@micropython/micropython-webassembly-pyscript@${MPY_VERSION}/`; this._p = null; }
   /** download the runtime (done automatically on first run) */
   load() {
     return this._p ||= (async () => {
@@ -26,11 +27,11 @@ export class Python {
     let assets; try { assets = await this.load(); } catch (e) { return { stdout: '', stderr: `python: ${e.message}\n`, output: `python: ${e.message}\n`, code: 1 }; }
     const vfs = this.vfs; const files = {}, dirs = [];
     for (const [p, n] of vfs.nodes) { if (n.dir) dirs.push(p); else if (n.data.length < 4e6) files[p] = n.data; }
-    let sqMod = null;
-    if (this.sqlite && (/sqlite/i.test(code) || [...vfs.nodes].some(([p, n]) => !n.dir && p.endsWith('.py') && n.data.length < 2e6 && /sqlite/i.test(dec.decode(n.data))))) {
-      try { sqMod = await this.sqlite.module(); } catch (e) { return { stdout: '', stderr: `python: could not load SQLite (${e.message})\n`, code: 1 }; }
+    let sqMod = null, sq = null;
+    if (this._sq && (/sqlite/i.test(code) || [...vfs.nodes].some(([p, n]) => !n.dir && p.endsWith('.py') && n.data.length < 2e6 && /sqlite/i.test(dec.decode(n.data))))) {
+      try { sq = await this._sq(); sqMod = await sq.module(); } catch (e) { return { stdout: '', stderr: `python: could not load SQLite (${e.message})\n`, code: 1 }; }
     }
-    const src = sqMod ? assets.factory + this.sqlite.glueSource + '\n' + SQLITE_PY_BRIDGE + '\n' + MPY_WORKER : assets.factory + MPY_WORKER;
+    const src = sqMod ? assets.factory + sq.glueSource + '\n' + SQLITE_PY_BRIDGE + '\n' + MPY_WORKER : assets.factory + MPY_WORKER;
     const r = await workerRun(src, { sqliteModule: sqMod, sqliteShim: SQLITE_PY_SHIM, compat: MPY_COMPAT, wasm: assets.wasm, files, dirs, cwd, argv, code: String(code), stdin, heap: heapMB * 1024 * 1024 }, { timeoutMs, signal, name: 'python' });
     if (r.error) return { stdout: '', stderr: `python: ${r.error}\n`, output: `python: ${r.error}\n`, code: r.timeout ? 124 : r.aborted ? 130 : 1 };
     const errs = [];

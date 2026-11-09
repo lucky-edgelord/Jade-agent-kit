@@ -36,12 +36,12 @@ await page.route('https://ollama.com/**', async route => {
   }
   return route.fulfill({ status: 404, json: { error: 'nope' }, headers: cors });
 });
-r = await ev(async () => { const ev_ = []; const a = kit.agent({ model: 'gpt-oss:120b', onEvent: e => ev_.push(e.type + (e.name ? ':' + e.name : '')) }); const text = await a.prompt('make and run a python hello'); return { text, ev: ev_, n: a.messages.length }; });
+r = await ev(async () => { const ev_ = []; const a = await kit.agent({ model: 'gpt-oss:120b', onEvent: e => ev_.push(e.type + (e.name ? ':' + e.name : '')) }); const text = await a.prompt('make and run a python hello'); return { text, ev: ev_, n: a.messages.length }; });
 ok(r.text === 'Done: Created /hi.py (19 bytes) | hi from py | [1] Kit | # Example', 'the agent loop runs tools until the model answers: ' + JSON.stringify(r.text));
 ok(r.ev.includes('tool_call:write') && r.ev.includes('tool_result:bash') && r.ev.includes('thinking') && r.ev.at(-1) === 'done', 'events: ' + r.ev.join(','));
 const chat = seen.find(s => s.path === '/api/chat');
 ok(chat.auth === 'Bearer test-key' && chat.body.model === 'gpt-oss:120b' && chat.body.stream === true && chat.body.tools.map(x => x.function.name).join() === 'read,write,edit,bash,search,fetch' && chat.body.messages[0].role === 'system', 'requests go to ollama.com with the key, the six tools and a system prompt');
 ok(seen.some(s => s.path === '/api/web_search' && s.body.query === 'jade agent kit' && s.body.max_results === 5) && seen.some(s => s.path === '/api/web_fetch' && s.body.url === 'https://example.com/kit'), 'search and fetch use Ollama web search / fetch');
-r = await ev(async () => { kit.ollama.apiKey = 'bad'; try { await kit.agent().prompt('x'); return 'no error'; } catch (e) { return e.message; } finally { kit.ollama.apiKey = 'test-key'; } });
+r = await ev(async () => { kit.ollama.apiKey = 'bad'; try { await (await kit.agent()).prompt('x'); return 'no error'; } catch (e) { return e.message; } finally { kit.ollama.apiKey = 'test-key'; } });
 ok(/key was rejected/.test(r), 'a bad key is explained: ' + r);
 await t.done();

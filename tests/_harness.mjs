@@ -7,11 +7,12 @@ import pw from 'playwright';
 const ROOT = path.resolve(new URL('..', import.meta.url).pathname);
 const TYPES = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html', '.wasm': 'application/wasm', '.json': 'application/json', '.map': 'application/json', '.xdc': 'application/zip' };
 
-export async function start({ persist = false, files = null, ollamaKey = 'test-key', from = process.env.JAK_SRC ? 'src/index.js' : 'dist/jade-agent-kit.js', busybox = true } = {}) {
+export async function start({ persist = false, files = null, ollamaKey = 'test-key', from = process.env.JAK_SRC ? 'src/index.js' : 'dist/jade-agent-kit.js', busybox = true, use = 'all' } = {}) {
   const base = 'https://kit.test';
   const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY } : undefined;
-  const browser = await pw.chromium.launch({ proxy, args: ['--enable-unsafe-swiftshader'] });
-  const ctx = await browser.newContext({ ignoreHTTPSErrors: true });
+  const browser = await pw.chromium.launch({ proxy, args: ['--enable-unsafe-swiftshader', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] });
+  const ctx = await browser.newContext({ ignoreHTTPSErrors: true, permissions: ['geolocation', 'camera', 'microphone', 'notifications'], geolocation: { latitude: 40.01, longitude: -74, accuracy: 10 } });
+  const requests = []; ctx.on('request', r => requests.push(r.url()));
   // the repository is served at https://kit.test straight from disk (no server, no proxy)
   await ctx.route('https://kit.test/**', route => {
     const u = new URL(route.request().url()); const p = path.join(ROOT, decodeURIComponent(u.pathname));
@@ -23,10 +24,10 @@ export async function start({ persist = false, files = null, ollamaKey = 'test-k
   page.on('pageerror', e => fail.push('[pageerror] ' + e.message));
   page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|favicon/.test(m.text())) log.push('[console] ' + m.text()); });
   await page.goto(`${base}/tests/page.html`);
-  await page.evaluate(async ({ from, opts }) => { const mod = await import('/' + from); window.K = mod; window.kit = await mod.createKit(opts); }, { from, opts: { persist, files, ollamaKey, busybox } });
+  await page.evaluate(async ({ from, opts }) => { const mod = await import('/' + from); window.K = mod; window.kit = await mod.createKit(opts); }, { from, opts: { persist, files, ollamaKey, busybox, use } });
   const ev = (fn, arg) => page.evaluate(fn, arg);
   return {
-    page, ok, ev, base, log, fail,
+    page, ok, ev, base, log, fail, from, ctx, requests,
     async done() { await browser.close(); for (const l of log) console.log(l); for (const f of fail) console.log(f); console.log(fail.length ? `\n${fail.length} FAILED` : '\nALL PASS'); process.exit(fail.length ? 1 : 0); },
   };
 }

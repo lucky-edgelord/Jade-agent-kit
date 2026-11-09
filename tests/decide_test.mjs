@@ -67,6 +67,6 @@ r = await ev(() => kit.js.run(`const d = await kit.decide({ state: 'x', question
 ok(r.stdout === 'true cloud\n', 'scripts call kit.decide: ' + JSON.stringify(r));
 r = await ev(async () => { Object.assign(kit.decisions, { server: 'ollaya', model: '' }); try { await kit.decide({ state: 's', question: 'q', type: 'yesno' }); return 'no error'; } catch (e) { return e.message; } });
 ok(/no decision model/.test(r), 'no model set: ' + r);
-r = await ev(async () => { const k = await K.createKit({ busybox: false, decide: { server: 'ollama', model: 'clef-flash', host: 'http://localhost:11434' } }); return [k.decisions.server, k.decisions.base, (await k.decide({ state: 's', question: 'q', type: 'yesno' })).answer]; });
+r = await ev(async () => { const k = await K.createKit({ use: ['decide'], busybox: false, decide: { server: 'ollama', model: 'clef-flash', host: 'http://localhost:11434' } }); return [k.decisions.server, k.decisions.base, (await k.decide({ state: 's', question: 'q', type: 'yesno' })).answer]; });
 ok(r.join() === 'ollama,http://localhost:11434,true', 'createKit({ decide }) configures it: ' + r);
 await t.done();
