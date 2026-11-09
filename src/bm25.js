@@ -53,6 +53,16 @@ export class BM25 {
     }
     return sc;
   }
+  /**
+   * Like search, but every document that shares a word with the query is a match, even when BM25 scores it 0 (in a
+   * small corpus a word in half the documents has no weight). Ties go to the document sharing more of the query's words.
+   */
+  match(query, { limit = 10 } = {}) {
+    const q = new Set(Array.isArray(query) ? query : this.tok(query)); if (!q.size) return [];
+    const sc = this.scores([...q]); const out = [];
+    for (let i = 0; i < this.N; i++) { let n = 0; for (const t of q) if (this.tf[i].has(t)) n++; if (n) out.push({ ...this.docs[i], score: sc[i], shared: n }); }
+    return out.sort((a, b) => b.score - a.score || b.shared - a.shared).slice(0, limit);
+  }
   /** the best matches, highest score first: [{ id, text, score, ...yourFields }] */
   search(query, { limit = 10, minScore = 0 } = {}) {
     const sc = this.scores(query);

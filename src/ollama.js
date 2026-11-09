@@ -50,6 +50,17 @@ export class Ollama {
   /** Ollama Cloud web fetch: { title, content, links } */
   async webFetch(url, { signal } = {}) { return (await this._post('/api/web_fetch', { url: String(url) }, signal)).json(); }
   /**
+   * One answer, not streamed: { content, thinking, tool_calls } (a <think> block in content is moved to thinking).
+   * @param {{ model: string, messages: object[], tools?: object[], format?: 'json'|object, think?: boolean|string, options?: object, signal?: AbortSignal }} req
+   */
+  async complete({ signal, ...req }) {
+    const j = await (await this._post('/api/chat', { ...req, stream: false }, signal)).json();
+    if (j.error) throw new Error(`${this.name}: ${j.error}`);
+    const m = j.message || {}; let content = String(m.content || ''); let thinking = m.thinking || '';
+    content = content.replace(/<think>([\s\S]*?)<\/think>/g, (_, t) => { thinking += t; return ''; }).trim();
+    return { content, thinking, tool_calls: m.tool_calls || [], usage: { prompt: j.prompt_eval_count, output: j.eval_count } };
+  }
+  /**
    * Streamed chat: yields Ollama's chunks ({ message: { content, thinking, tool_calls }, done, … }).
    * @param {{ model: string, messages: object[], tools?: object[], think?: boolean|string, options?: object, signal?: AbortSignal }} req
    */

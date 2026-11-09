@@ -1,5 +1,5 @@
-/*! Jade Agent Kit 0.2.0 | MIT | https://github.com/lucky-edgelord/Jade-agent-kit | bundles code under its own licenses: see THIRD_PARTY_NOTICES.md */
-import{b as d,c as p,f as u,i as l,l as f,m}from"./chunk-UIOAVZ6D.js";var h=`
+/*! Jade Agent Kit 0.3.0 | MIT | https://github.com/lucky-edgelord/Jade-agent-kit | bundles code under its own licenses: see THIRD_PARTY_NOTICES.md */
+import{b as d,c as p,f as u,i as l,l as f,m}from"./chunk-XLHGWUGT.js";import"./chunk-HHGNCRW6.js";var h=`
 async function __bbExec(BusyBoxModule, MOD, d) {
   const { args, stdin, entries, cwd } = d;
   const SYS = new Set(['/dev', '/proc']);

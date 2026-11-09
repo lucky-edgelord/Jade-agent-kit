@@ -7,7 +7,7 @@
 import { VFS } from './vfs.js';
 import { setAssetsBase, getAssetsBase } from './util.js';
 
-export const VERSION = '0.2.0';
+export const VERSION = '0.3.0';
 const OLLAMA_LOCAL = 'http://localhost:11434';
 
 /** every feature: what kit.use(name) loads and how it is set up */
@@ -33,10 +33,22 @@ const FEATURES = {
   cron: async () => (await import('./schedule.js')).Cron,
   schedule: async k => { const { Scheduler } = await import('./schedule.js'); const s = new Scheduler(k); if (k.config.scheduler !== false) s.start(); return s; },
   sentry: async k => { const { Sentry } = await import('./sentry.js'); const s = new Sentry({ kit: k, allow: k.config.sentry?.allow || [] }); if (k.config.sentry?.start !== false) s.start(); return s; },
-  tools: async k => { const { createTools } = await import('./tools.js'); return createTools(k); },
+  tools: async k => { const { createTools } = await import('./tools.js'); const t = k.tools = createTools(k); for (const d of k._toolDefs) t.addAll(d); return t; },
   agent: async () => await import('./agent.js'),
+  // the agent brain: each adds its tool(s) and a plugin for kit.agent({ brain }); options from createKit({ memory: {…}, … })
+  memory: brain(async k => new (await import('./memory.js')).Memory({ kit: k, ...k.config.memory })),
+  knowledge: brain(async k => new (await import('./knowledge.js')).Knowledge({ kit: k, ...k.config.knowledge })),
+  think: brain(async k => new (await import('./think.js')).Think({ kit: k, ...k.config.think })),
+  delegate: brain(async k => new (await import('./delegate.js')).Delegate({ kit: k, ...k.config.delegate })),
+  skills: brain(async k => new (await import('./skills.js')).Skills({ kit: k, ...k.config.skills })),
+  history: brain(async k => new (await import('./history.js')).History({ kit: k, ...k.config.history })),
+  guard: brain(async k => new (await import('./guard.js')).ContextGuard({ kit: k, ...k.config.guard })),
+  router: brain(async k => { await k.use('tools'); return new (await import('./router.js')).ToolRouter({ kit: k, ...k.config.router }); }),
+  models: brain(async k => new (await import('./router.js')).ModelRouter({ kit: k, ...(Array.isArray(k.config.models) ? { models: k.config.models } : k.config.models) })),
 };
-const ALIASES = { decide: 'decisions', schedules: 'schedule', scheduler: 'schedule', node: 'js', javascript: 'js', db: 'sqlite' };
+// a brain feature's tools join the kit's tool list (now, or when the tools load)
+function brain(make) { return async k => { const f = await make(k); const d = f.toolDefs; if (d) { k._toolDefs.push(d); k.tools?.addAll(d); } return f; }; }
+const ALIASES = { decide: 'decisions', schedules: 'schedule', scheduler: 'schedule', node: 'js', javascript: 'js', db: 'sqlite', kg: 'knowledge', steering: 'skills', 'tool-router': 'router', 'model-router': 'models', context: 'guard', chats: 'history' };
 export const FEATURE_NAMES = Object.keys(FEATURES);
 const KEEP = new Set(['agent', 'ollama']);   // kit.agent() stays the helper; ollama sets kit.ollama (the cloud) and kit.local itself
 
@@ -54,13 +66,17 @@ async function bridge(k, op, a) {
  * @param {{ persist?: string|false, files?: Record<string, string|Uint8Array>, use?: string[]|'all', ollamaKey?: string,
  *           ollamaHost?: string, decide?: { server?: 'ollaya'|'ollama'|'cloud', model?: string, host?: string, apiKey?: string },
  *           sentry?: { allow?: string[], start?: boolean }, assetsBase?: string, cdn?: string, engine?: 'auto'|'wasm'|'js',
- *           scheduler?: boolean, busybox?: boolean }} [o]
+ *           scheduler?: boolean, busybox?: boolean, provider?: 'cloud'|'local', model?: string,
+ *           memory?: object, knowledge?: object, think?: object, delegate?: object, skills?: object, history?: object, guard?: object,
+ *           router?: object, models?: Array<{ model, note, provider? }> }} [o]
  *   persist: an IndexedDB name; files (and webxdc updates) are kept across reloads under it
  *   use: features to load now (e.g. ['shell', 'python']), or 'all'
  *   ollamaKey / ollamaHost: Ollama Cloud key; Ollama on a machine (default http://localhost:11434)
  *   decide: decision server; sentry: { allow: ['camera', 'audio', 'location'] }
  *   assetsBase: where the kit's assets/ are if you host them; cdn: npm CDN for runtimes loaded on demand
  *   scheduler / sentry.start: start them when they are loaded (default true); busybox: start BusyBox with the shell
+ *   provider / model: the default Ollama and model for agents and kit.complete(); memory, knowledge, …: options for the
+ *   agent-brain features (see each module), models: the model router's list
  */
 export async function createKit(o = {}) {
   const config = { persist: false, files: null, ollamaKey: '', ollamaHost: OLLAMA_LOCAL, decide: {}, cdn: 'https://cdn.jsdelivr.net/npm/', engine: 'auto', ...o };
@@ -97,9 +113,24 @@ export async function createKit(o = {}) {
     async decide(args) { return (await kit.use('decisions')).decide(args); },
     /** embeddings from Ollama on a machine */
     async embed(input, opts) { return (await kit.use('ollama')).local.embed(input, opts); },
-    /** a pi-style agent on Ollama (read, write, edit, bash, search, fetch): await kit.agent({ model }) */
-    async agent(opts = {}) { const [m] = await kit.use('agent', 'tools', 'ollama'); return new m.Agent({ kit, ...opts }); },
+    /**
+     * A pi-style agent on Ollama (read, write, edit, bash, search, fetch): await kit.agent({ model }).
+     * brain: what else it gets, each loaded only if asked for: true (memory, skills, history, guard), 'all', or a list of
+     * memory | knowledge | think | delegate | skills | history | guard | router | models (or { name, ...options }).
+     * resume: a saved chat's id (needs history) to carry on with.
+     */
+    async agent(opts = {}) {
+      const [m] = await kit.use('agent', 'tools', 'ollama');
+      let plugins = opts.plugins || [];
+      if (opts.brain) plugins = [...await (await import('./brain.js')).brainPlugins(kit, opts.brain), ...plugins];
+      const a = new m.Agent({ kit, ...opts, plugins });
+      if (opts.resume) { const c = (await kit.use('history')).load(opts.resume); Object.assign(a, { id: c.id, title: c.title, messages: c.messages }); }
+      return a;
+    },
+    /** one answer from the kit's model, not streamed: await kit.complete({ prompt | messages, system, json }) */
+    async complete(o) { return (await import('./internal/llm.js')).complete(kit, o); },
   };
+  Object.defineProperty(kit, '_toolDefs', { value: [] });   // brain features' tools, waiting for the tools to load
   if (config.use) await kit.use(config.use);
   return kit;
 }
