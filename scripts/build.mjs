@@ -15,7 +15,8 @@ export const ENTRIES = {
   memory: 'src/memory.js', knowledge: 'src/knowledge.js', think: 'src/think.js', delegate: 'src/delegate.js', skills: 'src/skills.js',
   history: 'src/history.js', guard: 'src/guard.js', router: 'src/router.js', brain: 'src/brain.js',
   secrets: 'src/secrets.js', flows: 'src/flows.js', playbooks: 'src/playbooks.js', gantt: 'src/gantt.js', autonomy: 'src/autonomy.js',
-  heartbeat: 'src/heartbeat.js', curiosity: 'src/curiosity.js', lisp: 'src/lisp.js',
+  heartbeat: 'src/heartbeat.js', curiosity: 'src/curiosity.js', lisp: 'src/lisp.js', notes: 'src/notes.js',
+  http: 'src/http.js', mcp: 'src/mcp.js', senses: 'src/senses.js', usb: 'src/usb.js', backup: 'src/backup.js',
 };
 const banner = `/*! Jade Agent Kit ${pkg.version} | MIT | https://github.com/lucky-edgelord/Jade-agent-kit | bundles code under its own licenses: see THIRD_PARTY_NOTICES.md */`;
 fs.rmSync('dist', { recursive: true, force: true });

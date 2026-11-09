@@ -7,7 +7,7 @@
 import { VFS } from './vfs.js';
 import { setAssetsBase, getAssetsBase } from './util.js';
 
-export const VERSION = '0.4.0';
+export const VERSION = '0.5.0';
 const OLLAMA_LOCAL = 'http://localhost:11434';
 
 /** every feature: what kit.use(name) loads and how it is set up */
@@ -53,6 +53,13 @@ const FEATURES = {
   heartbeat: brain(async k => { const h = new (await import('./heartbeat.js')).Heartbeat({ kit: k, ...k.config.heartbeat }); if (k.config.heartbeat?.start) h.start(); return h; }),
   curiosity: brain(async k => { const c = new (await import('./curiosity.js')).Curiosity({ kit: k, ...k.config.curiosity }); if (k.config.curiosity?.start) c.start(); return c; }),
   lisp: brain(async k => new (await import('./lisp.js')).Lisp({ kit: k, ...k.config.lisp })),
+  notes: brain(async k => new (await import('./notes.js')).Notes({ kit: k, ...k.config.notes })),
+  // senses and devices
+  http: brain(async k => new (await import('./http.js')).Http({ kit: k, ...k.config.http })),
+  mcp: brain(async k => { await k.use('tools'); const m = new (await import('./mcp.js')).Mcp({ kit: k, ...k.config.mcp }); await m.ready; return m; }),
+  senses: brain(async k => new (await import('./senses.js')).Senses({ kit: k, ...k.config.senses })),
+  usb: brain(async k => new (await import('./usb.js')).Usb({ kit: k })),
+  backup: brain(async k => new (await import('./backup.js')).Backup({ kit: k, ...k.config.backup })),
   models: brain(async k => new (await import('./router.js')).ModelRouter({ kit: k, ...(Array.isArray(k.config.models) ? { models: k.config.models } : k.config.models) })),
 };
 // a brain feature's tools join the kit's tool list (now, or when the tools load)

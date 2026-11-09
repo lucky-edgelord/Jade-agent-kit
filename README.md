@@ -1,6 +1,6 @@
 # Jade Agent Kit
 
-A browser workspace for AI agents, loaded from a CDN with one import. It is lean: the core is about 6.5 KB gzipped, and
+A browser workspace for AI agents, loaded from a CDN with one import. It is lean: the core is about 6.6 KB gzipped, and
 each feature below is its own module that downloads only when a page uses it. It gives any web project:
 
 - a **virtual file system** (in memory, optionally kept in IndexedDB) shared by everything below
@@ -24,6 +24,10 @@ each feature below is its own module that downloads only when a page uses it. It
 - **automation**: n8n-style **flows**, Ansible-style **playbooks** (no model in the loop, approved by your app),
   **Gantt** plans, an **autonomy** queue (a 3-tier scheduler with budgets and approval gates), a **heartbeat**
   checklist, **curiosity** wake-ups, **secrets**, and **Jade Lisp** for DSLs
+- **notes**: an Obsidian-style vault on the file system: [[wiki links]], backlinks, #tags, search, renames that update
+  links, daily notes and templates
+- **senses and devices**: **HTTP** with secrets, **MCP** servers, the camera, microphone, location and other sensors,
+  **look** (the agent sees an image), **WebUSB**, and **backups** (gzip, optionally encrypted, to a file or a server)
 
 Its pieces come from [Jade Vault](https://github.com/lucky-edgelord/jade-vault). The examples below use `kit.<feature>`
 after `await kit.use('<feature>')`.
@@ -32,7 +36,7 @@ after `await kit.use('<feature>')`.
 
 ```html
 <script type="module">
-  import { createKit } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.4.0/dist/jade-agent-kit.js';
+  import { createKit } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.5.0/dist/jade-agent-kit.js';
 
   const kit = await createKit({ persist: 'my-app' });          // loads only the file system; kept in IndexedDB
   kit.vfs.write('/hello.txt', 'hello world\n');
@@ -41,7 +45,7 @@ after `await kit.use('<feature>')`.
 </script>
 ```
 
-Always pin a version (`@v0.4.0`); jsDelivr caches tags permanently. Open `examples/index.html` for a shell and an
+Always pin a version (`@v0.5.0`); jsDelivr caches tags permanently. Open `examples/index.html` for a shell and an
 agent side by side.
 
 ## Lean loading
@@ -60,13 +64,13 @@ The helpers load what they need: `kit.run()` (shell), `kit.tool()` (tools + the 
 `kit.decide()`, `kit.embed()`, `kit.agent()`. Every module also works on its own, without `createKit`:
 
 ```js
-import { BM25 } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.4.0/dist/bm25.js';
-import { SentryEngine } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.4.0/dist/sentry-engine.js';
+import { BM25 } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.5.0/dist/bm25.js';
+import { SentryEngine } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.5.0/dist/sentry-engine.js';
 ```
 
 | Feature (`kit.use(…)`) | File | Size (gzip, with what it imports) |
 | --- | --- | --- |
-| core: `createKit`, file system | `jade-agent-kit.js` | 6.5 KB |
+| core: `createKit`, file system | `jade-agent-kit.js` | 6.6 KB |
 | `shell` (+ `busybox`) | `shell.js`, `busybox.js` | 12.6 KB + 5.0 KB, then BusyBox's ~300 KB WebAssembly |
 | `js` | `js.js` | 13.3 KB |
 | `python` | `python.js` | 8.5 KB, then MicroPython (~0.5 MB) from jsDelivr |
@@ -90,6 +94,9 @@ import { SentryEngine } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-ag
 | `gantt`, `autonomy` | `gantt.js`, `autonomy.js` | 4.7 KB, 6.5 KB |
 | `heartbeat`, `curiosity`, `secrets` | `heartbeat.js`, `curiosity.js`, `secrets.js` | 2.2 KB, 6.0 KB, 2.8 KB |
 | `lisp` | `lisp.js` | 3.2 KB, then the interpreter (~50 KB) |
+| `notes` | `notes.js` | 6.3 KB |
+| `http`, `mcp` | `http.js`, `mcp.js` | 3.2 KB, 5.0 KB |
+| `senses`, `usb`, `backup` | `senses.js`, `usb.js`, `backup.js` | 4.1 KB, 2.2 KB, 3.1 KB |
 
 Shared code goes into small `chunk-*.js` files, so two features never download the same code twice. The kit finds
 `assets/` next to the file you imported; to host everything yourself, copy `dist/` and `assets/` together, or pass
@@ -103,6 +110,10 @@ come from.
 - **An agent**: `kit.agent()` is pi-style (six tools, ~2 KB on top of the tools); no brain unless you pass `brain`.
 - **A brain**: `kit.agent({ brain: ['memory'] })` loads memory and nothing else; `brain: true` is memory, skills,
   history and the context guard; `'all'` is everything. Each part also works without an agent (`kit.use('memory')`).
+
+### Changes from 0.4
+
+- New: `notes`, `http`, `mcp`, `senses` (with `look`), `usb` and `backup`. Secrets are redacted as `{{NAME}}`.
 
 ### Changes from 0.3
 
@@ -463,6 +474,29 @@ await flows.run('Digest');
 
 `kit.notify(title, body)` reaches the user: `createKit({ notify })`, else a browser notification when permitted. Agent
 plugins can now also answer a tool call themselves with `beforeTool(agent, { name, args })`, which is how approval gates work.
+
+### Notes, senses and devices
+
+```js
+const notes = await kit.use('notes');                       // every .md file outside /.kit/
+notes.search('roadmap'); notes.links('Kit'); notes.rename('Kit', 'Jade Kit');   // the rename updates every link
+notes.daily(); notes.create('/meetings/Sync', { template: 'Meeting', vars: { who: 'Ana' } });
+
+const kit2 = await createKit({ secrets: { WEATHER_KEY: '…' }, senses: { allow: ['camera', 'location'] },
+  backup: { server: { url: 'https://backup.example', token: '…' }, passphrase: '…' } });
+await (await kit2.use('http')).request({ url: 'https://api.example/v1?key={{WEATHER_KEY}}' });
+await (await kit2.use('mcp')).add('calc', { url: 'https://mcp.example/mcp', headers: { Authorization: 'Bearer ${CALC_TOKEN}' } });
+await kit2.agent({ brain: ['senses', 'http', 'mcp', 'notes'] });
+```
+
+| Part | Tool(s) | What it does |
+| --- | --- | --- |
+| `notes` | `notes_search`, `note_links`, `note` | [[wiki links]] (alias, heading), markdown links, backlinks with the linking line, unresolved links, inline and frontmatter #tags, ranked search, overview, rename or move with link updates, daily notes and templates (`{{title}}`, `{{date:FORMAT}}`, `{{time}}`, your vars), open tasks. `createKit({ notes: { root, daily, templates, onOpen } })`. |
+| `http` | `http`, `secrets` | Requests with `{{SECRET}}` filled in and redacted from every answer; binary bodies saved to a file; an optional host allow list. |
+| `mcp` | `mcp` (and `mcp__server__tool` with `exposure: 'direct'`) | MCP servers over streamable HTTP (JSON and event streams, sessions, progress), from `/.kit/mcp.json` or `mcp.add()`; header values may use `${SECRET}`; tools, resources, images saved to files. |
+| `senses` | `senses`, `look` | Photo, audio recording and loudness, location, motion, battery, network, device facts. Camera, microphone and location only when the app allows them. `look` shows the agent an image on its next step. |
+| `usb` | `usb` | WebUSB: the app calls `usb.request(filters)` from a click; then open, claim, control and bulk transfers. |
+| `backup` | `backup` | The file system (or a folder) as gzip JSON, optionally AES-GCM encrypted with a passphrase; `download()`, `restore(bytes, { mode: 'merge'|'replace' })`, and a backup server (`upload()`, `list()`, `restoreFrom(name)`, `every(hours)`) with checksums. Secrets and approvals are never in a backup. |
 
 ## Things to know
 
