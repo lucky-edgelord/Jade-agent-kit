@@ -137,6 +137,9 @@ export function createTools(kit) {
     },
   };
   T.web_search = T.search; T.web_fetch = T.fetch;
+  const BUILTIN = new Set(Object.keys(T));
+  // tools that come with a feature: listed once the feature is loaded; a call loads it
+  const LAZY = { memory: 'memory', knowledge: 'knowledge', think: 'think', delegate: 'delegate', skill: 'skills', find_skill: 'skills', chat_history: 'history', more_tools: 'router' };
   const names = n => (n || Object.keys(T).filter(k => !k.startsWith('web_'))).filter(k => T[k]);
   return {
     defs: T,
@@ -145,11 +148,16 @@ export function createTools(kit) {
     anthropic: n => names(n).map(name => ({ name, description: T[name].description, input_schema: T[name].parameters })),
     /** run a tool; errors come back as text starting with "Error:" so a model can recover */
     async call(name, args = {}, ctx = {}) {
+      if (!T[name] && LAZY[name]) { try { await kit.use(LAZY[name]); } catch (e) { return `Error: ${name}: ${e?.message || e}`; } }
       const t = T[name]; if (!t) return `Error: unknown tool "${name}". Tools: ${names().join(', ')}`;
       if (typeof args === 'string') { try { args = JSON.parse(args || '{}'); } catch { return `Error: arguments for ${name} are not valid JSON`; } }
       try { return String(await t.run(args || {}, ctx)); } catch (e) { return `Error: ${e?.message || e}`; }
     },
     /** add your own tool: { description, parameters (JSON schema), run(args, ctx) } */
     add(name, def) { T[name] = def; return this; },
+    /** add several: { name: def } (features add their tools this way when they load) */
+    addAll(defs) { for (const [n, d] of Object.entries(defs || {})) if (!BUILTIN.has(n)) T[n] = d; return this; },
+    /** the feature behind a tool that is not loaded yet, if any */
+    lazy: name => T[name] ? null : LAZY[name] || null,
   };
 }

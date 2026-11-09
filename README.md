@@ -1,6 +1,6 @@
 # Jade Agent Kit
 
-A browser workspace for AI agents, loaded from a CDN with one import. It is lean: the core is about 5 KB gzipped, and
+A browser workspace for AI agents, loaded from a CDN with one import. It is lean: the core is about 6 KB gzipped, and
 each feature below is its own module that downloads only when a page uses it. It gives any web project:
 
 - a **virtual file system** (in memory, optionally kept in IndexedDB) shared by everything below
@@ -17,6 +17,10 @@ each feature below is its own module that downloads only when a page uses it. It
 - a **cron scheduler** (plain English or cron) for shell, JS, Python, agent or function jobs, and a **task list**
 - **embeddings** from Ollama on your machine, and a **vector store** on sqlite-vec (semantic and hybrid search)
 - a small **pi-style agent** on **Ollama Cloud** or **Ollama on your machine**, with six tools: `read`, `write`, `edit`, `bash`, `search`, `fetch`
+- an optional **agent brain**, each part loaded only if you ask for it: long-term **memory** and a journal, a
+  **knowledge graph** with a reasoner that proves its answers, **think** (tree of thoughts with verification),
+  **delegate** (sub-agents), **skills** and steering files, **chat history**, a **context guard** that compacts long
+  chats, and **routers** that pick the tools and the model for each turn
 
 Its pieces come from [Jade Vault](https://github.com/lucky-edgelord/jade-vault). The examples below use `kit.<feature>`
 after `await kit.use('<feature>')`.
@@ -25,7 +29,7 @@ after `await kit.use('<feature>')`.
 
 ```html
 <script type="module">
-  import { createKit } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.2.0/dist/jade-agent-kit.js';
+  import { createKit } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.3.0/dist/jade-agent-kit.js';
 
   const kit = await createKit({ persist: 'my-app' });          // loads only the file system; kept in IndexedDB
   kit.vfs.write('/hello.txt', 'hello world\n');
@@ -34,7 +38,7 @@ after `await kit.use('<feature>')`.
 </script>
 ```
 
-Always pin a version (`@v0.2.0`); jsDelivr caches tags permanently. Open `examples/index.html` for a shell and an
+Always pin a version (`@v0.3.0`); jsDelivr caches tags permanently. Open `examples/index.html` for a shell and an
 agent side by side.
 
 ## Lean loading
@@ -53,32 +57,51 @@ The helpers load what they need: `kit.run()` (shell), `kit.tool()` (tools + the 
 `kit.decide()`, `kit.embed()`, `kit.agent()`. Every module also works on its own, without `createKit`:
 
 ```js
-import { BM25 } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.2.0/dist/bm25.js';
-import { SentryEngine } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.2.0/dist/sentry-engine.js';
+import { BM25 } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.3.0/dist/bm25.js';
+import { SentryEngine } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.3.0/dist/sentry-engine.js';
 ```
 
 | Feature (`kit.use(…)`) | File | Size (gzip, with what it imports) |
 | --- | --- | --- |
-| core: `createKit`, file system | `jade-agent-kit.js` | 5.1 KB |
-| `shell` (+ `busybox`) | `shell.js`, `busybox.js` | 12.3 KB + 4.7 KB, then BusyBox's ~300 KB WebAssembly |
-| `js` | `js.js` | 13.1 KB |
-| `python` | `python.js` | 8.2 KB, then MicroPython (~0.5 MB) from jsDelivr |
-| `sqlite` | `sqlite.js` | 8.7 KB, then SQLite + sqlite-vec (~900 KB WebAssembly) |
-| `bm25` | `bm25.js` | 1.7 KB |
-| `ml` | `ml.js` | 4.4 KB, then each runtime from jsDelivr when used |
-| `webxdc` | `webxdc.js` | 9.0 KB |
-| `ollama` | `ollama.js` | 1.8 KB |
-| `vectors` | `vectors.js` | 3.1 KB (+ `sqlite`, `ollama`) |
-| `decisions` | `decide.js` | 4.1 KB |
-| `tasks`, `cron`, `schedule` | `tasks.js`, `schedule.js` | 1.0 KB, 4.8 KB |
-| `sentry` | `sentry.js` (engine alone: `sentry-engine.js`) | 9.5 KB (3.9 KB) |
-| `tools` | `tools.js` | 7.9 KB |
-| agent (`kit.agent()`) | `agent.js` | 1.4 KB (+ `tools`, `ollama`) |
+| core: `createKit`, file system | `jade-agent-kit.js` | 5.8 KB |
+| `shell` (+ `busybox`) | `shell.js`, `busybox.js` | 12.6 KB + 5.0 KB, then BusyBox's ~300 KB WebAssembly |
+| `js` | `js.js` | 13.3 KB |
+| `python` | `python.js` | 8.5 KB, then MicroPython (~0.5 MB) from jsDelivr |
+| `sqlite` | `sqlite.js` | 9.0 KB, then SQLite + sqlite-vec (~900 KB WebAssembly) |
+| `bm25` | `bm25.js` | 2.1 KB |
+| `ml` | `ml.js` | 4.7 KB, then each runtime from jsDelivr when used |
+| `webxdc` | `webxdc.js` | 9.2 KB |
+| `ollama` | `ollama.js` | 2.2 KB |
+| `vectors` | `vectors.js` | 3.4 KB (+ `sqlite`, `ollama`) |
+| `decisions` | `decide.js` | 4.6 KB |
+| `tasks`, `cron`, `schedule` | `tasks.js`, `schedule.js` | 1.3 KB, 5.1 KB |
+| `sentry` | `sentry.js` (engine alone: `sentry-engine.js`) | 9.8 KB (4.2 KB) |
+| `tools` | `tools.js` | 8.3 KB |
+| agent (`kit.agent()`) | `agent.js` | 2.3 KB (+ `tools`, `ollama`) |
+| brain: `memory` | `memory.js` | 7.2 KB |
+| brain: `knowledge` | `knowledge.js` | 5.7 KB, then the reasoner (~400 KB WebAssembly) |
+| brain: `think` | `think.js` | 11.2 KB |
+| brain: `delegate`, `skills`, `history` | `delegate.js`, `skills.js`, `history.js` | 3.8 KB, 5.4 KB, 5.5 KB |
+| brain: `guard`, `router`, `models` | `guard.js`, `router.js` | 4.0 KB, 4.4 KB |
 
 Shared code goes into small `chunk-*.js` files, so two features never download the same code twice. The kit finds
 `assets/` next to the file you imported; to host everything yourself, copy `dist/` and `assets/` together, or pass
 `createKit({ assetsBase: '/static/jak-assets/' })`; `createKit({ cdn })` changes where the runtimes loaded on demand
 come from.
+
+### As lean as you want
+
+- **Just one piece**: import a module file and skip `createKit` (`bm25.js`, `sentry-engine.js`, `vfs.js`, …).
+- **A workspace**: `createKit()` is the file system and a loader (5.8 KB); nothing else downloads until used.
+- **An agent**: `kit.agent()` is pi-style (six tools, ~2 KB on top of the tools); no brain unless you pass `brain`.
+- **A brain**: `kit.agent({ brain: ['memory'] })` loads memory and nothing else; `brain: true` is memory, skills,
+  history and the context guard; `'all'` is everything. Each part also works without an agent (`kit.use('memory')`).
+
+### Changes from 0.2
+
+- New: the agent brain (`memory`, `knowledge`, `think`, `delegate`, `skills`, `history`, `guard`, `router`,
+  `models`), agent plugins (`kit.agent({ plugins })`), `kit.complete()`, `createKit({ provider, model })`.
+- The agent's `done` event now comes after its plugins' `after` hooks (so a saved chat or journal entry is in place).
 
 ### Changes from 0.1
 
@@ -351,7 +374,7 @@ const kit = await createKit({ ollamaKey: 'your Ollama Cloud key' });   // leave 
 const agent = await kit.agent({
   provider: 'cloud',               // 'cloud' or 'local' (default: cloud when there is a key, else local)
   model: 'gpt-oss:120b',           // any model with tool support (default gpt-oss:120b on the cloud, qwen3:8b locally)
-  onEvent: e => {                  // text / thinking (delta), tool_call, tool_result, turn_end, done, error
+  onEvent: e => {                  // text / thinking (delta), tool_call, tool_result, turn_end, done, error (+ route, context, compaction with a brain)
     if (e.type === 'text') output.append(e.delta);
   },
 });
@@ -364,6 +387,39 @@ agent runs locally. Options: `system` (prompt), `tools` (names, default the six 
 `'low'|'medium'|'high'`), `maxSteps` (40), `options` (Ollama model options), `ollama` (your own client).
 `kit.ollama` (the cloud) and `kit.local` (your machine) are the clients: `chat()`, `models()`, `embed()`,
 `webSearch()`, `webFetch()`.
+
+### The agent brain: `kit.agent({ brain })`
+
+Each part is a feature of its own (its file downloads on first use), adds its tool to the agent, and plugs into the
+agent loop. Files live under `/.kit/` in the kit's file system, as plain text your app or its users can read and edit
+(persist the kit to keep them).
+
+```js
+const kit = await createKit({ persist: 'my-app', ollamaKey, memory: { journal: true } });
+const agent = await kit.agent({ brain: ['memory', 'skills', 'history', 'guard'] });   // or brain: true
+await agent.prompt('Remember that I take my coffee black');
+const later = await kit.agent({ brain: true, resume: agent.id });                    // carry on a saved chat
+```
+
+| Part | Tool | What it does | Options (`createKit({ <part>: {…} })`) |
+| --- | --- | --- | --- |
+| `memory` | `memory` | `/.kit/memory/Memory.md`: facts under sections, the best matches for each message in the prompt (BM25; by meaning too with `embed`). Never keeps anything that looks like a password or key. With `journal: true`, the model writes a journal entry after each prompt and the durable facts it names are remembered. | `root`, `rag` (8 lines; 0: newest up to `budget`), `embed` (an Ollama embedding model), `journal` |
+| `knowledge` | `knowledge` | Facts (`works_at(alice, acme)`), rules and constraints, and Jade's Rust reasoner: `verify` gives ✓ proven (with its proof), ✗ contradicted or ? unknown. The agent's facts are *proposed* until you `confirm()` them, and proofs say when they rest on unconfirmed facts. | `root`, `verifyMode` |
+| `think` | `think` | Tree of thoughts with verification: branches approaches, checks each with code, a shell command, a file, a rubric, a decision model or a self-review. A failed hard check is a veto. `auto` runs the whole search. | `root` |
+| `delegate` | `delegate` | A sub-agent with a clean context, read-only unless `write: true`, capped in steps and seconds; returns one report. | `read`, `write` (tool lists), `maxSteps`, `seconds` |
+| `skills` | `skill`, `find_skill` | `/.kit/SOUL.md` (persona), `/AGENTS.md` (standing instructions), `/.kit/SYSTEM.md` (replaces the base prompt), `/.kit/skills/<name>/SKILL.md`. Past 15 skills only the best matches are listed. `skills.expand('/skill:name …')` for slash commands, `skills.seed()` adds a skill-creator. | `root`, `allMax`, `top`, `embed`, `off` |
+| `history` | `chat_history` | Saves each chat after every prompt; list, read and search them. | `root`, `max` |
+| `guard` | — | Estimates every request; compacts old turns into a summary when the chat nears the window, trims if still too big, learns a model's real limit from "prompt is too long" and retries. | `limit`, `localLimit`, `compactAt`, `keepTurns` |
+| `router` | `more_tools` | Sends only the tools a message needs (core tools always); the rest stay behind `more_tools`. | `core`, `hints`, `max`, `minSaving` |
+| `models` | — | A decision model picks which model answers each prompt, from a note on what each is good at. | `createKit({ models: [{ model, note, provider? }] })` |
+
+Every part works without an agent too: `const mem = await kit.use('memory'); await mem.search('coffee')`,
+`(await kit.use('knowledge')).verify('above(carl, alice)')`, `kit.history.list()`, `kit.guard.compact(messages)`.
+
+Write your own plugin with the same hooks (`kit.agent({ plugins: [{ … }] })`): `tools` (names to add), `system(agent,
+{ query })` (prompt text), `route(agent)` (`{ client, model }`), `select(agent, names)` (tools for a step),
+`prepare(agent, { messages })` (the request), `recover(agent, error)` (`true` retries once), `after(agent, { text })`.
+`kit.complete({ prompt | messages, system, json })` gets one answer from the kit's model (`createKit({ provider, model })`).
 
 ## Things to know
 

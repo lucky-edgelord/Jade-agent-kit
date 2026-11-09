@@ -12,6 +12,8 @@ export const ENTRIES = {
   sqlite: 'src/sqlite.js', bm25: 'src/bm25.js', ml: 'src/ml.js', webxdc: 'src/webxdc.js', ollama: 'src/ollama.js', vectors: 'src/vectors.js',
   decide: 'src/decide.js', tasks: 'src/tasks.js', schedule: 'src/schedule.js', sentry: 'src/sentry.js', 'sentry-engine': 'src/sentry_engine.js',
   tools: 'src/tools.js', agent: 'src/agent.js',
+  memory: 'src/memory.js', knowledge: 'src/knowledge.js', think: 'src/think.js', delegate: 'src/delegate.js', skills: 'src/skills.js',
+  history: 'src/history.js', guard: 'src/guard.js', router: 'src/router.js', brain: 'src/brain.js',
 };
 const banner = `/*! Jade Agent Kit ${pkg.version} | MIT | https://github.com/lucky-edgelord/Jade-agent-kit | bundles code under its own licenses: see THIRD_PARTY_NOTICES.md */`;
 fs.rmSync('dist', { recursive: true, force: true });

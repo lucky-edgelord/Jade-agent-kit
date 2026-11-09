@@ -12,6 +12,7 @@ loads the components below, which keep their own licenses.
 | SQLite | 3.53.4 | Public domain | `assets/sqlite3.wasm`, built from the amalgamation; build inputs in `third_party/sqlite-wasm/`. |
 | sqlite-vec | 0.1.9 | MIT OR Apache-2.0 (Alex Garcia) | linked into `assets/sqlite3.wasm`. |
 | wasi-libc (linked into the SQLite build) | — | Apache-2.0 WITH LLVM-exception / MIT / BSD | |
+| Jade knowledge engine (`jade-kg`, Rust, from Jade Vault) | — | MIT | `assets/jade_kg.wasm`. Built with `serde_json` (MIT OR Apache-2.0) and the Rust standard library (MIT OR Apache-2.0). |
 
 ### BusyBox source
 
