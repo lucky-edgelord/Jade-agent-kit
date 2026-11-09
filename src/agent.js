@@ -26,6 +26,7 @@ export class Agent {
    *   select(agent, names, { query }) → names            the tools sent on this step
    *   prepare(agent, { messages, tools, client, model }) → messages   the request about to be sent (compaction, trimming)
    *   recover(agent, error, { messages, tools }) → true  retry the step once (e.g. after learning a context limit)
+   *   beforeTool(agent, { name, args }) → string         answer a tool call instead of running it (approval gates)
    *   after(agent, { text, prompt })                     when a prompt has finished (journal, save the chat)
    */
   constructor({ kit, provider = null, ollama = null, model = null, system = SYSTEM, tools = DEFAULT_TOOLS, think = undefined, maxSteps = 40, options = undefined, plugins = [], id = null, title = '', onEvent = null }) {
@@ -87,7 +88,9 @@ export class Agent {
           const name = c.function?.name; let args = c.function?.arguments ?? {};
           if (typeof args === 'string') { try { args = JSON.parse(args); } catch { args = {}; } }
           this.emit({ type: 'tool_call', name, args });
-          const result = await this.kit.tools.call(name, args, { signal, agent: this });
+          let result = null;
+          for (const p of this.plugins) if (p.beforeTool) { const r = await p.beforeTool(this, { name, args }); if (r != null) { result = String(r); break; } }
+          result ??= await this.kit.tools.call(name, args, { signal, agent: this });
           this.emit({ type: 'tool_result', name, result });
           this.messages.push({ role: 'tool', tool_name: name, content: result });
           if (signal.aborted) throw new DOMException('stopped', 'AbortError');

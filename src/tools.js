@@ -139,7 +139,8 @@ export function createTools(kit) {
   T.web_search = T.search; T.web_fetch = T.fetch;
   const BUILTIN = new Set(Object.keys(T));
   // tools that come with a feature: listed once the feature is loaded; a call loads it
-  const LAZY = { memory: 'memory', knowledge: 'knowledge', think: 'think', delegate: 'delegate', skill: 'skills', find_skill: 'skills', chat_history: 'history', more_tools: 'router' };
+  const LAZY = { memory: 'memory', knowledge: 'knowledge', think: 'think', delegate: 'delegate', skill: 'skills', find_skill: 'skills', chat_history: 'history', more_tools: 'router',
+    secrets: 'secrets', flow: 'flows', playbook: 'playbooks', gantt: 'gantt', autonomy: 'autonomy', heartbeat: 'heartbeat', curiosity: 'curiosity', lisp: 'lisp' };
   const names = n => (n || Object.keys(T).filter(k => !k.startsWith('web_'))).filter(k => T[k]);
   return {
     defs: T,
@@ -157,6 +158,8 @@ export function createTools(kit) {
     add(name, def) { T[name] = def; return this; },
     /** add several: { name: def } (features add their tools this way when they load) */
     addAll(defs) { for (const [n, d] of Object.entries(defs || {})) if (!BUILTIN.has(n)) T[n] = d; return this; },
+    /** every tool name: loaded, and the ones a call would load */
+    known: () => [...new Set([...names(), ...Object.keys(LAZY)])],
     /** the feature behind a tool that is not loaded yet, if any */
     lazy: name => T[name] ? null : LAZY[name] || null,
   };

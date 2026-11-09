@@ -1,6 +1,6 @@
 # Jade Agent Kit
 
-A browser workspace for AI agents, loaded from a CDN with one import. It is lean: the core is about 6 KB gzipped, and
+A browser workspace for AI agents, loaded from a CDN with one import. It is lean: the core is about 6.5 KB gzipped, and
 each feature below is its own module that downloads only when a page uses it. It gives any web project:
 
 - a **virtual file system** (in memory, optionally kept in IndexedDB) shared by everything below
@@ -21,6 +21,9 @@ each feature below is its own module that downloads only when a page uses it. It
   **knowledge graph** with a reasoner that proves its answers, **think** (tree of thoughts with verification),
   **delegate** (sub-agents), **skills** and steering files, **chat history**, a **context guard** that compacts long
   chats, and **routers** that pick the tools and the model for each turn
+- **automation**: n8n-style **flows**, Ansible-style **playbooks** (no model in the loop, approved by your app),
+  **Gantt** plans, an **autonomy** queue (a 3-tier scheduler with budgets and approval gates), a **heartbeat**
+  checklist, **curiosity** wake-ups, **secrets**, and **Jade Lisp** for DSLs
 
 Its pieces come from [Jade Vault](https://github.com/lucky-edgelord/jade-vault). The examples below use `kit.<feature>`
 after `await kit.use('<feature>')`.
@@ -29,7 +32,7 @@ after `await kit.use('<feature>')`.
 
 ```html
 <script type="module">
-  import { createKit } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.3.0/dist/jade-agent-kit.js';
+  import { createKit } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.4.0/dist/jade-agent-kit.js';
 
   const kit = await createKit({ persist: 'my-app' });          // loads only the file system; kept in IndexedDB
   kit.vfs.write('/hello.txt', 'hello world\n');
@@ -38,7 +41,7 @@ after `await kit.use('<feature>')`.
 </script>
 ```
 
-Always pin a version (`@v0.3.0`); jsDelivr caches tags permanently. Open `examples/index.html` for a shell and an
+Always pin a version (`@v0.4.0`); jsDelivr caches tags permanently. Open `examples/index.html` for a shell and an
 agent side by side.
 
 ## Lean loading
@@ -57,13 +60,13 @@ The helpers load what they need: `kit.run()` (shell), `kit.tool()` (tools + the 
 `kit.decide()`, `kit.embed()`, `kit.agent()`. Every module also works on its own, without `createKit`:
 
 ```js
-import { BM25 } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.3.0/dist/bm25.js';
-import { SentryEngine } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.3.0/dist/sentry-engine.js';
+import { BM25 } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.4.0/dist/bm25.js';
+import { SentryEngine } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.4.0/dist/sentry-engine.js';
 ```
 
 | Feature (`kit.use(…)`) | File | Size (gzip, with what it imports) |
 | --- | --- | --- |
-| core: `createKit`, file system | `jade-agent-kit.js` | 5.8 KB |
+| core: `createKit`, file system | `jade-agent-kit.js` | 6.5 KB |
 | `shell` (+ `busybox`) | `shell.js`, `busybox.js` | 12.6 KB + 5.0 KB, then BusyBox's ~300 KB WebAssembly |
 | `js` | `js.js` | 13.3 KB |
 | `python` | `python.js` | 8.5 KB, then MicroPython (~0.5 MB) from jsDelivr |
@@ -83,6 +86,10 @@ import { SentryEngine } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-ag
 | brain: `think` | `think.js` | 11.2 KB |
 | brain: `delegate`, `skills`, `history` | `delegate.js`, `skills.js`, `history.js` | 3.8 KB, 5.4 KB, 5.5 KB |
 | brain: `guard`, `router`, `models` | `guard.js`, `router.js` | 4.0 KB, 4.4 KB |
+| `flows`, `playbooks` | `flows.js`, `playbooks.js` | 15.6 KB, 15.3 KB |
+| `gantt`, `autonomy` | `gantt.js`, `autonomy.js` | 4.7 KB, 6.5 KB |
+| `heartbeat`, `curiosity`, `secrets` | `heartbeat.js`, `curiosity.js`, `secrets.js` | 2.2 KB, 6.0 KB, 2.8 KB |
+| `lisp` | `lisp.js` | 3.2 KB, then the interpreter (~50 KB) |
 
 Shared code goes into small `chunk-*.js` files, so two features never download the same code twice. The kit finds
 `assets/` next to the file you imported; to host everything yourself, copy `dist/` and `assets/` together, or pass
@@ -96,6 +103,12 @@ come from.
 - **An agent**: `kit.agent()` is pi-style (six tools, ~2 KB on top of the tools); no brain unless you pass `brain`.
 - **A brain**: `kit.agent({ brain: ['memory'] })` loads memory and nothing else; `brain: true` is memory, skills,
   history and the context guard; `'all'` is everything. Each part also works without an agent (`kit.use('memory')`).
+
+### Changes from 0.3
+
+- New: automation (`flows`, `playbooks`, `gantt`, `autonomy`, `heartbeat`, `curiosity`, `lisp`, `secrets`), `kit.notify()`,
+  and the agent plugin hook `beforeTool`. Scripts can now call `kit.ask`, `kit.agent`, `kit.flow`, `kit.flows`,
+  `kit.notify` and `kit.kv` (also as `jade.*`).
 
 ### Changes from 0.2
 
@@ -420,6 +433,36 @@ Write your own plugin with the same hooks (`kit.agent({ plugins: [{ … }] })`):
 { query })` (prompt text), `route(agent)` (`{ client, model }`), `select(agent, names)` (tools for a step),
 `prepare(agent, { messages })` (the request), `recover(agent, error)` (`true` retries once), `after(agent, { text })`.
 `kit.complete({ prompt | messages, system, json })` gets one answer from the kit's model (`createKit({ provider, model })`).
+
+### Automation
+
+Each part is its own feature (`kit.use('flows')`, …) with a tool for agents (`kit.agent({ brain: ['flows'] })` adds it).
+Files live under `/.kit/`; options come from `createKit({ <part>: {…} })`.
+
+```js
+const kit = await createKit({ persist: 'my-app', secrets: { WEATHER_KEY: '…' },
+  playbooks: { approve: async ({ name, summary }) => confirm(`Allow playbook ${name}? ${summary.modules}`) } });
+const flows = await kit.use('flows');
+flows.save({ name: 'Digest', trigger: { type: 'schedule', when: 'every day at 18:00' }, steps: [
+  { type: 'file', action: 'read', path: '/inbox.md' },
+  { type: 'llm', prompt: 'Summarise in 3 bullets:\n{{ $json }}' },
+  { type: 'notify', title: 'Digest', body: '{{ $json }}' }] });
+await flows.run('Digest');
+```
+
+| Part | Tool | What it does |
+| --- | --- | --- |
+| `flows` | `flow` | n8n-style flows in `/.kit/flows/*.flow.json`: tool, js, shell, decide, llm, agent, file, set, if, switch, each, wait, notify, playbook, flow and stop steps, `{{ expressions }}` in a sandboxed worker, and manual, schedule or file-change triggers. `flows.run(name, input)`, `flows.on(run => …)`. |
+| `playbooks` | `playbook` | Ansible-style task lists with no model in the loop: when, loop, register, retries/until, block/rescue/always, assert, tags, secrets (redacted from logs), allow_hosts. A playbook runs unattended only after your app approves it (`playbooks.approve(name)` or an `approve` callback), and again after any change; an agent can save one but never approve it. |
+| `gantt` | `gantt` | Projects with dependencies, milestones, owners (`agent` or `user`), progress, the critical path and a text chart. The user's tasks are theirs. |
+| `autonomy` | `autonomy` | A work queue: interrupts, priorities with aging and deadlines, long goals in slices with feedback levels. `autonomy.enable(true)` runs it within budgets (steps per hour and day), quiet hours and pauses while the user is active; tools on the deny list wait for `autonomy.allow(id)`. The agent's ready Gantt tasks join it. |
+| `heartbeat` | `heartbeat` | Every N minutes in active hours an agent checks `/.kit/HEARTBEAT.md`; `HEARTBEAT_OK` is silent, anything else calls `onAlert` and `kit.notify`. An empty checklist skips without calling the model. |
+| `curiosity` | `curiosity` | Random wake-ups: an agent picks an activity (explore, reflect, connect, practice, anticipate, ask, rest) ranked by learning progress, works a little and reports; the reward is measured from the files it changed. |
+| `secrets` | `secrets` | API keys your app hands the kit, kept out of the file system; agents see names only and use them as `{{ NAME }}` in playbooks. |
+| `lisp` | `lisp` | Jade Lisp: a Scheme/Clojure-style Lisp in the JavaScript sandbox, with every tool as `(tool/NAME …)`, macros and fuel-limited sandboxes for DSLs. |
+
+`kit.notify(title, body)` reaches the user: `createKit({ notify })`, else a browser notification when permitted. Agent
+plugins can now also answer a tool call themselves with `beforeTool(agent, { name, args })`, which is how approval gates work.
 
 ## Things to know
 
