@@ -28,7 +28,7 @@ await page.route('https://ollama.com/**', async route => {
 
 // ---------------------------------------------------------------- secrets
 let r = await ev(async () => { const s = await kit.use('secrets'); await s.set('API_TOKEN', 'tok-123456789'); let bad; try { await s.set('bad name', 'x'); } catch (e) { bad = e.message; } return { names: s.names(), red: s.redact('Bearer tok-123456789 ok'), tool: await kit.tool('secrets', {}), bad, inVfs: [...kit.vfs.walk('/')].some(p => kit.vfs.isFile(p) && kit.vfs.read(p).includes('tok-123456789')) }; });
-ok(r.names.join() === 'API_TOKEN' && r.red === 'Bearer [secret API_TOKEN] ok' && /API_TOKEN/.test(r.tool) && !/tok-/.test(r.tool) && /letters, digits/.test(r.bad) && !r.inVfs, 'secrets: names only for the agent, values redacted and never in the file system: ' + JSON.stringify(r));
+ok(r.names.join() === 'API_TOKEN' && r.red === 'Bearer {{API_TOKEN}} ok' && /API_TOKEN/.test(r.tool) && !/tok-/.test(r.tool) && /letters, digits/.test(r.bad) && !r.inVfs, 'secrets: names only for the agent, values redacted and never in the file system: ' + JSON.stringify(r));
 
 // ---------------------------------------------------------------- flows
 r = await ev(async () => {

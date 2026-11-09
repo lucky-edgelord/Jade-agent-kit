@@ -4,8 +4,8 @@
 //   automation parts (flows, playbooks, gantt, autonomy, heartbeat, curiosity, lisp, secrets) add their tool when named
 //   brain: ['memory', { name: 'think' }, { name: 'memory', journal: true }]
 export const BRAIN = ['memory', 'knowledge', 'think', 'delegate', 'skills', 'history', 'guard', 'router', 'models',
-  'flows', 'playbooks', 'gantt', 'autonomy', 'heartbeat', 'curiosity', 'lisp', 'secrets'];
-const EXTRA = new Set(['flows', 'playbooks', 'gantt', 'autonomy', 'heartbeat', 'curiosity', 'lisp', 'secrets']);   // tools only: not in 'all'
+  'flows', 'playbooks', 'gantt', 'autonomy', 'heartbeat', 'curiosity', 'lisp', 'secrets', 'notes', 'http', 'mcp', 'senses', 'usb', 'backup'];
+const EXTRA = new Set(['flows', 'playbooks', 'gantt', 'autonomy', 'heartbeat', 'curiosity', 'lisp', 'secrets', 'notes', 'http', 'mcp', 'senses', 'usb', 'backup']);   // tools only: not in 'all'
 export const DEFAULT_BRAIN = ['memory', 'skills', 'history', 'guard'];
 const ALIAS = { kg: 'knowledge', steering: 'skills', 'tool-router': 'router', 'model-router': 'models', context: 'guard', chats: 'history' };
 

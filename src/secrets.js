@@ -17,8 +17,8 @@ export class Secrets {
   get(name) { return this.v.get(String(name)); }
   /** name → value, for templates */
   map() { return Object.fromEntries(this.v); }
-  /** replace every secret value in text with [secret NAME] */
-  redact(text) { let s = String(text ?? ''); for (const [k, v] of this.v) if (v && v.length >= 4) s = s.split(v).join(`[secret ${k}]`); return s; }
+  /** replace every secret value in text with {{NAME}} */
+  redact(text) { let s = String(text ?? ''); for (const [k, v] of this.v) if (v && v.length >= 4) s = s.split(v).join(`{{${k}}}`); return s; }
   get toolDefs() {
     return { secrets: {
       description: 'The names of the secrets (API keys, tokens) the app has given you. You never see their values: use them as {{ secrets.NAME }} in playbooks and http requests.',

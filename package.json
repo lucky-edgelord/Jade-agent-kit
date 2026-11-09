@@ -1,6 +1,6 @@
 {
   "name": "jade-agent-kit",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "A browser workspace for AI agents, loadable from a CDN: BusyBox shell, virtual file system, MicroPython, a Node-style JS sandbox, TensorFlow.js / ONNX / LiteRT, SQLite with sqlite-vec, BM25 search, webxdc apps, LLM tool definitions and a pi-style agent on Ollama Cloud.",
   "type": "module",
   "main": "dist/jade-agent-kit.js",

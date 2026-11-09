@@ -140,7 +140,8 @@ export function createTools(kit) {
   const BUILTIN = new Set(Object.keys(T));
   // tools that come with a feature: listed once the feature is loaded; a call loads it
   const LAZY = { memory: 'memory', knowledge: 'knowledge', think: 'think', delegate: 'delegate', skill: 'skills', find_skill: 'skills', chat_history: 'history', more_tools: 'router',
-    secrets: 'secrets', flow: 'flows', playbook: 'playbooks', gantt: 'gantt', autonomy: 'autonomy', heartbeat: 'heartbeat', curiosity: 'curiosity', lisp: 'lisp' };
+    secrets: 'secrets', flow: 'flows', playbook: 'playbooks', gantt: 'gantt', autonomy: 'autonomy', heartbeat: 'heartbeat', curiosity: 'curiosity', lisp: 'lisp',
+    notes_search: 'notes', note_links: 'notes', note: 'notes', http: 'http', mcp: 'mcp', senses: 'senses', look: 'senses', usb: 'usb', backup: 'backup' };
   const names = n => (n || Object.keys(T).filter(k => !k.startsWith('web_'))).filter(k => T[k]);
   return {
     defs: T,
