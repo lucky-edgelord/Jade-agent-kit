@@ -1,5 +1,5 @@
-/*! Jade Agent Kit 0.5.0 | MIT | https://github.com/lucky-edgelord/Jade-agent-kit | bundles code under its own licenses: see THIRD_PARTY_NOTICES.md */
-import{b as k}from"./chunk-IR7E5Y46.js";import"./chunk-SMOWZWVS.js";var y=new Set("a an and are as at be by can do does for from has have how i in into is it its me my of on or our so than that the their then there these they this to up us was we what when where which who why will with would you your please help want need make get".split(" ")),p=c=>String(c).replace(/<!--[\s\S]*?-->/g,"").replace(/\n{3,}/g,`
+/*! Jade Agent Kit 3.0.0 | MIT | https://github.com/lucky-edgelord/Jade-agent-kit | bundles code under its own licenses: see THIRD_PARTY_NOTICES.md */
+import{b as k}from"./chunk-WXM6MTAS.js";import"./chunk-BN2DZAOB.js";var y=new Set("a an and are as at be by can do does for from has have how i in into is it its me my of on or our so than that the their then there these they this to up us was we what when where which who why will with would you your please help want need make get".split(" ")),p=c=>String(c).replace(/<!--[\s\S]*?-->/g,"").replace(/\n{3,}/g,`
 
 `).trim();function u(c){let t=/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(c||""),e={};if(t)for(let s of t[1].split(/\r?\n/)){let i=s.indexOf(":");i>0&&(e[s.slice(0,i).trim().toLowerCase()]=s.slice(i+1).trim().replace(/^["']|["']$/g,""))}return{meta:e,body:t?c.slice(t[0].length):c||""}}var v=`---
 name: skill-creator

@@ -1,5 +1,5 @@
-/*! Jade Agent Kit 0.5.0 | MIT | https://github.com/lucky-edgelord/Jade-agent-kit | bundles code under its own licenses: see THIRD_PARTY_NOTICES.md */
-import{i as p,l as g}from"./chunk-WWTG62YD.js";import"./chunk-SMOWZWVS.js";var y=`% Rules and constraints. Facts live in facts.jsonl.
+/*! Jade Agent Kit 3.0.0 | MIT | https://github.com/lucky-edgelord/Jade-agent-kit | bundles code under its own licenses: see THIRD_PARTY_NOTICES.md */
+import{i as p,l as g}from"./chunk-63FLLWJE.js";import"./chunk-BN2DZAOB.js";var y=`% Rules and constraints. Facts live in facts.jsonl.
 %   rule:        head :- condition, condition.        (variables start with a capital letter)
 %   constraint:  ! name: condition, condition.         (any match is a contradiction)
 %   conditions:  relation(a, X)   not relation(a, X)   X = Y   X != Y   X < Y   X <= Y   X > Y   X >= Y

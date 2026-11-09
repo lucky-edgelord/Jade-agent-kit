@@ -1,5 +1,5 @@
-/*! Jade Agent Kit 0.5.0 | MIT | https://github.com/lucky-edgelord/Jade-agent-kit | bundles code under its own licenses: see THIRD_PARTY_NOTICES.md */
-import"./chunk-SMOWZWVS.js";var p="Read HEARTBEAT.md (below). Follow it strictly. Do not infer or repeat old tasks from prior chats. Use your tools to check what it asks. If nothing needs attention, reply HEARTBEAT_OK.",f=`# HEARTBEAT
+/*! Jade Agent Kit 3.0.0 | MIT | https://github.com/lucky-edgelord/Jade-agent-kit | bundles code under its own licenses: see THIRD_PARTY_NOTICES.md */
+import"./chunk-BN2DZAOB.js";var p="Read HEARTBEAT.md (below). Follow it strictly. Do not infer or repeat old tasks from prior chats. Use your tools to check what it asks. If nothing needs attention, reply HEARTBEAT_OK.",f=`# HEARTBEAT
 <!-- Read on every heartbeat. Keep it short: a checklist of things to look at. If nothing needs attention the agent
      replies HEARTBEAT_OK and nobody hears about it. While this file has only comments, headings and empty boxes,
      heartbeats are skipped for free. Example:

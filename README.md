@@ -36,7 +36,7 @@ after `await kit.use('<feature>')`.
 
 ```html
 <script type="module">
-  import { createKit } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.5.0/dist/jade-agent-kit.js';
+  import { createKit } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v3.0.0/dist/jade-agent-kit.js';
 
   const kit = await createKit({ persist: 'my-app' });          // loads only the file system; kept in IndexedDB
   kit.vfs.write('/hello.txt', 'hello world\n');
@@ -45,7 +45,7 @@ after `await kit.use('<feature>')`.
 </script>
 ```
 
-Always pin a version (`@v0.5.0`); jsDelivr caches tags permanently. Open `examples/index.html` for a shell and an
+Always pin a version (`@v3.0.0`); jsDelivr caches tags permanently. Open `examples/index.html` for a shell and an
 agent side by side.
 
 ## Lean loading
@@ -56,7 +56,7 @@ agent side by side.
 const py = await kit.use('python');               // the Python runner (also kit.python from now on)
 const [db, bm] = await kit.use('sqlite', 'bm25');
 await createKit({ use: ['shell', 'sqlite'] });     // load some up front
-await createKit({ use: 'all' });                   // everything, like 0.1
+await createKit({ use: 'all' });                   // everything, like v1
 kit.has('python');                                 // loaded yet?
 ```
 
@@ -64,8 +64,8 @@ The helpers load what they need: `kit.run()` (shell), `kit.tool()` (tools + the 
 `kit.decide()`, `kit.embed()`, `kit.agent()`. Every module also works on its own, without `createKit`:
 
 ```js
-import { BM25 } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.5.0/dist/bm25.js';
-import { SentryEngine } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v0.5.0/dist/sentry-engine.js';
+import { BM25 } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v3.0.0/dist/bm25.js';
+import { SentryEngine } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v3.0.0/dist/sentry-engine.js';
 ```
 
 | Feature (`kit.use(…)`) | File | Size (gzip, with what it imports) |
@@ -111,23 +111,14 @@ come from.
 - **A brain**: `kit.agent({ brain: ['memory'] })` loads memory and nothing else; `brain: true` is memory, skills,
   history and the context guard; `'all'` is everything. Each part also works without an agent (`kit.use('memory')`).
 
-### Changes from 0.4
+### Changes in v3.0.0 (from v2.0.0)
 
-- New: `notes`, `http`, `mcp`, `senses` (with `look`), `usb` and `backup`. Secrets are redacted as `{{NAME}}`.
+- New: automation (`flows`, `playbooks`, `gantt`, `autonomy`, `heartbeat`, `curiosity`, `lisp`, `secrets`), `notes`,
+  and senses and devices (`http`, `mcp`, `senses` with `look`, `usb`, `backup`); `kit.notify()`; the agent plugin hook
+  `beforeTool`. Scripts can now call `kit.ask`, `kit.agent`, `kit.flow`, `kit.flows`, `kit.notify` and `kit.kv`
+  (also as `jade.*`). Secrets are redacted as `{{NAME}}`.
 
-### Changes from 0.3
-
-- New: automation (`flows`, `playbooks`, `gantt`, `autonomy`, `heartbeat`, `curiosity`, `lisp`, `secrets`), `kit.notify()`,
-  and the agent plugin hook `beforeTool`. Scripts can now call `kit.ask`, `kit.agent`, `kit.flow`, `kit.flows`,
-  `kit.notify` and `kit.kv` (also as `jade.*`).
-
-### Changes from 0.2
-
-- New: the agent brain (`memory`, `knowledge`, `think`, `delegate`, `skills`, `history`, `guard`, `router`,
-  `models`), agent plugins (`kit.agent({ plugins })`), `kit.complete()`, `createKit({ provider, model })`.
-- The agent's `done` event now comes after its plugins' `after` hooks (so a saved chat or journal entry is in place).
-
-### Changes from 0.1
+### Changes in v2.0.0 (from v1.0.0)
 
 - `createKit()` no longer loads every feature. Use `kit.use('…')` (or `createKit({ use: [...] })` / `'all'`) before
   touching `kit.python`, `kit.sqlite`, `kit.webxdc`, …; the async helpers load by themselves.
@@ -135,6 +126,9 @@ come from.
 - `createKit` exports only `createKit`, `VFS`, `setAssetsBase` and `getAssetsBase`; import other classes from their
   module file (`dist/sqlite.js`, `dist/bm25.js`, …).
 - The scheduler starts when it is loaded (`use: ['schedule']` on pages that should run saved jobs).
+- New: Sentry for the browser; the agent brain (`memory`, `knowledge`, `think`, `delegate`, `skills`, `history`,
+  `guard`, `router`, `models`), agent plugins (`kit.agent({ plugins })`), `kit.complete()`, `createKit({ provider, model })`.
+  The agent's `done` event comes after its plugins' `after` hooks.
 
 ## API
 
