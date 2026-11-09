@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scheduling and tasks: kit.schedule, kit.cron, kit.tasks · Jade Agent Kit</title>
+<meta name="description" content="A lean, CDN-delivered browser workspace for AI agents: shell, files, Python, JavaScript, SQLite, search, memory, automation and a pi-style agent.">
+<link rel="stylesheet" href="assets/docs.css">
+<script>try{var t=localStorage.getItem('jak-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+<header class="top">
+  <button class="menu-btn" aria-label="Menu" aria-expanded="false" aria-controls="side">☰</button>
+  <a class="brand" href="index.html">Jade Agent Kit</a><span class="ver">v3.0.0</span>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs  ( / )" autocomplete="off" aria-label="Search the docs"><div id="results" role="listbox" hidden></div></div>
+  <button class="theme" aria-label="Toggle light and dark">Theme</button>
+  <a class="gh" href="https://github.com/lucky-edgelord/Jade-agent-kit">GitHub</a>
+</header>
+<div class="wrap">
+<aside id="side"><div class="grp"><h2>Start</h2><ul><li><a href="index.html">Jade Agent Kit</a></li><li><a href="quick-start.html">Quick start</a></li><li><a href="lean-loading.html">Lean loading</a></li></ul></div>
+<div class="grp"><h2>Guides</h2><ul><li><a href="create-kit.html">createKit options</a></li><li><a href="files.html">Files: kit.vfs</a></li><li><a href="shell.html">Shell: kit.run, kit.shell</a></li><li><a href="python.html">Python: kit.python</a></li><li><a href="javascript.html">JavaScript: kit.js</a></li><li><a href="sqlite.html">SQLite: kit.sqlite</a></li><li><a href="bm25.html">BM25: kit.bm25</a></li><li><a href="machine-learning.html">Machine learning: kit.ml</a></li><li><a href="webxdc.html">webxdc: kit.webxdc</a></li><li><a href="decisions.html">Decisions: kit.decide, kit.decisions</a></li><li><a href="scheduling-and-tasks.html" aria-current="page">Scheduling and tasks: kit.schedule, kit.cron, kit.tasks</a></li><li><a href="sentry.html">Sentry: kit.sentry</a></li><li><a href="embeddings-and-vector-search.html">Embeddings and vector search: kit.embed, kit.vectors</a></li><li><a href="tools-for-llms.html">Tools for LLMs: kit.tools</a></li><li><a href="the-agent.html">The agent: kit.agent()</a></li><li><a href="the-agent-brain.html">The agent brain: kit.agent({ brain })</a></li><li><a href="automation.html">Automation</a></li><li><a href="notes-senses-and-devices.html">Notes, senses and devices</a></li></ul></div>
+<div class="grp"><h2>Reference</h2><ul><li><a href="features.html">Features and sizes</a></li><li><a href="tools.html">Tools</a></li><li class="mods"><details><summary>Modules</summary><ul><li><a href="module-jade-agent-kit.html">jade-agent-kit</a></li><li><a href="module-agent.html">agent</a></li><li><a href="module-autonomy.html">autonomy</a></li><li><a href="module-backup.html">backup</a></li><li><a href="module-bm25.html">bm25</a></li><li><a href="module-brain.html">brain</a></li><li><a href="module-busybox.html">busybox</a></li><li><a href="module-curiosity.html">curiosity</a></li><li><a href="module-decide.html">decide</a></li><li><a href="module-delegate.html">delegate</a></li><li><a href="module-flows.html">flows</a></li><li><a href="module-gantt.html">gantt</a></li><li><a href="module-guard.html">guard</a></li><li><a href="module-heartbeat.html">heartbeat</a></li><li><a href="module-history.html">history</a></li><li><a href="module-http.html">http</a></li><li><a href="module-js.html">js</a></li><li><a href="module-knowledge.html">knowledge</a></li><li><a href="module-lisp.html">lisp</a></li><li><a href="module-mcp.html">mcp</a></li><li><a href="module-memory.html">memory</a></li><li><a href="module-ml.html">ml</a></li><li><a href="module-notes.html">notes</a></li><li><a href="module-ollama.html">ollama</a></li><li><a href="module-playbooks.html">playbooks</a></li><li><a href="module-python.html">python</a></li><li><a href="module-router.html">router</a></li><li><a href="module-schedule.html">schedule</a></li><li><a href="module-secrets.html">secrets</a></li><li><a href="module-senses.html">senses</a></li><li><a href="module-sentry.html">sentry</a></li><li><a href="module-sentry-engine.html">sentry-engine</a></li><li><a href="module-shell.html">shell</a></li><li><a href="module-skills.html">skills</a></li><li><a href="module-sqlite.html">sqlite</a></li><li><a href="module-tasks.html">tasks</a></li><li><a href="module-think.html">think</a></li><li><a href="module-tools.html">tools</a></li><li><a href="module-usb.html">usb</a></li><li><a href="module-vectors.html">vectors</a></li><li><a href="module-vfs.html">vfs</a></li><li><a href="module-webxdc.html">webxdc</a></li></ul></details></li></ul></div>
+<div class="grp"><h2>More</h2><ul><li><a href="things-to-know.html">Things to know</a></li><li><a href="development.html">Development</a></li><li><a href="license.html">License</a></li><li><a href="changelog.html">Changelog</a></li></ul></div></aside>
+<main>
+<article>
+<pre><code class="language-js">kit.schedule.add({ name: <span class="s">'backup'</span>, when: <span class="s">'every day at 2am'</span>, command: <span class="s">'tar -czf /backup.tgz /notes'</span> });
+kit.schedule.add({ name: <span class="s">'digest'</span>, when: <span class="s">'weekdays at 8:30'</span>, prompt: <span class="s">'Summarize /inbox into /digest.md'</span> });   // an agent run
+kit.schedule.add({ when: <span class="s">'in 20 minutes'</span>, js: <span class="s">`require('fs').writeFileSync('/ping.txt', 'pong')`</span> });         // once
+kit.schedule.add({ when: <span class="s">'*/5 * * * *'</span>, run: () =&gt; refreshSomething() });                                   // a <span class="k">function</span> (not saved)
+kit.schedule.add({ when: <span class="s">'@hourly'</span>, python: <span class="s">'print(&quot;hi&quot;)'</span> });
+kit.schedule.list(); kit.schedule.runNow(<span class="s">'backup'</span>); kit.schedule.disable(<span class="s">'digest'</span>); kit.schedule.remove(<span class="s">'backup'</span>);
+kit.schedule.on(e =&gt; console.log(e.type, e.job.name, e.result));   // <span class="s">'run'</span> | <span class="s">'error'</span> | <span class="s">'change'</span>
+</code></pre>
+<p><code>when</code> is plain English (&quot;every 30 minutes&quot;, &quot;every monday at 6pm&quot;, &quot;tomorrow at 7pm&quot;, &quot;in 2 hours&quot;) or 5-field cron
+(<code>* , - /</code>, names, <code>@daily</code>…), in local time. Jobs run only while a page with the kit is open; one missed while it was
+closed runs once when the page opens again. Jobs are saved in <code>/.kit/schedule.json</code> (function jobs are not: add them
+again on each load). <code>createKit({ scheduler: false })</code> keeps it stopped until <code>kit.schedule.start()</code>.
+<code>kit.cron</code> has the parser itself: <code>fromText</code>, <code>parse</code>, <code>next</code>, <code>upcoming</code>, <code>describe</code>.</p>
+<pre><code class="language-js"><span class="k">const</span> [a] = kit.tasks.add([<span class="s">'Plan the API'</span>, <span class="s">'Write tests'</span>]);   // or add({ title, notes, due })
+kit.tasks.start(a.id); kit.tasks.done(a.id); kit.tasks.update(<span class="n">2</span>, { notes: <span class="s">'edge cases'</span> });
+kit.tasks.list({ status: <span class="s">'pending'</span> }); kit.tasks.text();     // [x] #<span class="n">1</span> Plan the API …
+kit.tasks.on(items =&gt; render(items)); kit.tasks.clear();      // clear removes done tasks
+</code></pre>
+<p>Agents get both as tools: <code>await kit.agent({ tools: [...DEFAULT_TOOLS, &#39;tasks&#39;, &#39;schedule&#39;] })</code> (<code>DEFAULT_TOOLS</code> is exported by <code>dist/agent.js</code>).</p>
+
+</article>
+<nav class="pager" aria-label="Pages"><a class="prev" href="decisions.html"><span>Previous</span>Decisions: kit.decide, kit.decisions</a><a class="next" href="sentry.html"><span>Next</span>Sentry: kit.sentry</a></nav>
+<footer>Jade Agent Kit v3.0.0 · MIT · <a href="https://github.com/lucky-edgelord/Jade-agent-kit/blob/main/README.md">Edit the source</a> · generated by <code>scripts/docs.mjs</code></footer>
+</main>
+</div>
+<script src="assets/docs.js" defer></script>
+</body>
+</html>

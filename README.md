@@ -518,6 +518,9 @@ npm test                     # builds dist/ and runs the browser tests (tests/*_
 JAK_SRC=1 node tests/run.mjs # the same tests against src/
 ```
 
+The documentation site is generated into `docs/` (published with GitHub Pages) from this README, the build and the code:
+`npm run docs` after `npm run build`. CI fails if `docs/` is out of date, so commit it with the change.
+
 `dist/` is committed, because jsDelivr serves the repository's files as they are. Release: bump `version` in
 `package.json` and `VERSION` in `src/index.js`, `npm test`, commit, tag `vX.Y.Z`, push the tag.
 

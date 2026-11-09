@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>notes.js · Jade Agent Kit</title>
+<meta name="description" content="A lean, CDN-delivered browser workspace for AI agents: shell, files, Python, JavaScript, SQLite, search, memory, automation and a pi-style agent.">
+<link rel="stylesheet" href="assets/docs.css">
+<script>try{var t=localStorage.getItem('jak-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+<header class="top">
+  <button class="menu-btn" aria-label="Menu" aria-expanded="false" aria-controls="side">☰</button>
+  <a class="brand" href="index.html">Jade Agent Kit</a><span class="ver">v3.0.0</span>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs  ( / )" autocomplete="off" aria-label="Search the docs"><div id="results" role="listbox" hidden></div></div>
+  <button class="theme" aria-label="Toggle light and dark">Theme</button>
+  <a class="gh" href="https://github.com/lucky-edgelord/Jade-agent-kit">GitHub</a>
+</header>
+<div class="wrap">
+<aside id="side"><div class="grp"><h2>Start</h2><ul><li><a href="index.html">Jade Agent Kit</a></li><li><a href="quick-start.html">Quick start</a></li><li><a href="lean-loading.html">Lean loading</a></li></ul></div>
+<div class="grp"><h2>Guides</h2><ul><li><a href="create-kit.html">createKit options</a></li><li><a href="files.html">Files: kit.vfs</a></li><li><a href="shell.html">Shell: kit.run, kit.shell</a></li><li><a href="python.html">Python: kit.python</a></li><li><a href="javascript.html">JavaScript: kit.js</a></li><li><a href="sqlite.html">SQLite: kit.sqlite</a></li><li><a href="bm25.html">BM25: kit.bm25</a></li><li><a href="machine-learning.html">Machine learning: kit.ml</a></li><li><a href="webxdc.html">webxdc: kit.webxdc</a></li><li><a href="decisions.html">Decisions: kit.decide, kit.decisions</a></li><li><a href="scheduling-and-tasks.html">Scheduling and tasks: kit.schedule, kit.cron, kit.tasks</a></li><li><a href="sentry.html">Sentry: kit.sentry</a></li><li><a href="embeddings-and-vector-search.html">Embeddings and vector search: kit.embed, kit.vectors</a></li><li><a href="tools-for-llms.html">Tools for LLMs: kit.tools</a></li><li><a href="the-agent.html">The agent: kit.agent()</a></li><li><a href="the-agent-brain.html">The agent brain: kit.agent({ brain })</a></li><li><a href="automation.html">Automation</a></li><li><a href="notes-senses-and-devices.html">Notes, senses and devices</a></li></ul></div>
+<div class="grp"><h2>Reference</h2><ul><li><a href="features.html">Features and sizes</a></li><li><a href="tools.html">Tools</a></li><li class="mods"><details open><summary>Modules</summary><ul><li><a href="module-jade-agent-kit.html">jade-agent-kit</a></li><li><a href="module-agent.html">agent</a></li><li><a href="module-autonomy.html">autonomy</a></li><li><a href="module-backup.html">backup</a></li><li><a href="module-bm25.html">bm25</a></li><li><a href="module-brain.html">brain</a></li><li><a href="module-busybox.html">busybox</a></li><li><a href="module-curiosity.html">curiosity</a></li><li><a href="module-decide.html">decide</a></li><li><a href="module-delegate.html">delegate</a></li><li><a href="module-flows.html">flows</a></li><li><a href="module-gantt.html">gantt</a></li><li><a href="module-guard.html">guard</a></li><li><a href="module-heartbeat.html">heartbeat</a></li><li><a href="module-history.html">history</a></li><li><a href="module-http.html">http</a></li><li><a href="module-js.html">js</a></li><li><a href="module-knowledge.html">knowledge</a></li><li><a href="module-lisp.html">lisp</a></li><li><a href="module-mcp.html">mcp</a></li><li><a href="module-memory.html">memory</a></li><li><a href="module-ml.html">ml</a></li><li><a href="module-notes.html" aria-current="page">notes</a></li><li><a href="module-ollama.html">ollama</a></li><li><a href="module-playbooks.html">playbooks</a></li><li><a href="module-python.html">python</a></li><li><a href="module-router.html">router</a></li><li><a href="module-schedule.html">schedule</a></li><li><a href="module-secrets.html">secrets</a></li><li><a href="module-senses.html">senses</a></li><li><a href="module-sentry.html">sentry</a></li><li><a href="module-sentry-engine.html">sentry-engine</a></li><li><a href="module-shell.html">shell</a></li><li><a href="module-skills.html">skills</a></li><li><a href="module-sqlite.html">sqlite</a></li><li><a href="module-tasks.html">tasks</a></li><li><a href="module-think.html">think</a></li><li><a href="module-tools.html">tools</a></li><li><a href="module-usb.html">usb</a></li><li><a href="module-vectors.html">vectors</a></li><li><a href="module-vfs.html">vfs</a></li><li><a href="module-webxdc.html">webxdc</a></li></ul></details></li></ul></div>
+<div class="grp"><h2>More</h2><ul><li><a href="things-to-know.html">Things to know</a></li><li><a href="development.html">Development</a></li><li><a href="license.html">License</a></li><li><a href="changelog.html">Changelog</a></li></ul></div></aside>
+<main>
+<article>
+<h1><code>notes.js</code></h1>
+<dl class="facts"><dt>Source</dt><dd><a href="https://github.com/lucky-edgelord/Jade-agent-kit/blob/main/src/notes.js"><code>src/notes.js</code></a></dd><dt>Size</dt><dd>6.3 KB gzipped (14.3 KB raw), with the chunks it imports</dd><dt>Load</dt><dd><code>kit.use('notes')</code></dd><dt>Tools</dt><dd><a href="tools.html#notes-search"><code>notes_search</code></a> <a href="tools.html#note-links"><code>note_links</code></a> <a href="tools.html#note"><code>note</code></a></dd></dl>
+<p>Notes: an Obsidian-style knowledge base on the kit's file system. Notes are .md files anywhere (under <code>root</code>). [[wiki links]] (with |alias and #heading) and markdown links to .md files, backlinks, unresolved links, #tags and frontmatter tags, ranked search, daily notes, templates ({{title}}, {{date:YYYY-MM-DD}}, {{time}}, your own {{vars}}) and renames that update every link. The index rebuilds lazily when files change. Ported from Jade Vault (app/modules/vault_core.js).</p>
+<p>On its own, without <code>createKit</code>:</p>
+<pre><code><span class="k">import</span> * as m <span class="k">from</span> <span class="s">'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v3.0.0/dist/notes.js'</span>;</code></pre>
+<h2 id="api-reference" class="plain">Documented API</h2>
+<p>Methods with a doc comment in the source. The <a href="https://github.com/lucky-edgelord/Jade-agent-kit/blob/main/src/notes.js">source</a> has the rest.</p>
+<h2 id="functions">Functions</h2>
+<h3 id="functions-frontmatter"><code>frontmatter(text)</code><a class="anchor" href="#functions-frontmatter" aria-label="Link to this member">#</a></h3>
+<p>frontmatter: { data: { key: value | [values] }, body } (simple YAML: scalars, [a, b] and - item lists)</p>
+<h2 id="notes"><code>Notes</code></h2>
+<h3 id="notes-constructor"><code>constructor({ kit, root = '/', daily = '/daily', templates = '/templates', exclude = /^\/\.kit\/|\/(node_modules|\.git|…)</code><a class="anchor" href="#notes-constructor" aria-label="Link to this member">#</a></h3>
+<ul><li><code>o</code> <span class="ty">{ kit: object, root?: string, daily?: string, templates?: string, exclude?: RegExp, onOpen?: (path: string) =&gt; void }</span> daily / templates: folders</li></ul>
+<h3 id="notes-all"><code>all()</code><a class="anchor" href="#notes-all" aria-label="Link to this member">#</a></h3>
+<p>every note path, sorted</p>
+<h3 id="notes-resolve"><code>resolve(target, from = null)</code><a class="anchor" href="#notes-resolve" aria-label="Link to this member">#</a></h3>
+<p>a link target (&quot;Note&quot;, &quot;folder/Note&quot;, &quot;Note.md&quot;) → the note's path, or null</p>
+<h3 id="notes-index"><code>index()</code><a class="anchor" href="#notes-index" aria-label="Link to this member">#</a></h3>
+<p>the index: { notes, out: Map&lt;path, Set&gt;, back: Map&lt;path, Set&gt;, missing: Map&lt;path, Set&gt;, tags: Map&lt;tag, Set&gt;, words }</p>
+<h3 id="notes-linkname"><code>linkName(p)</code><a class="anchor" href="#notes-linkname" aria-label="Link to this member">#</a></h3>
+<p>the shortest name that links to a note unambiguously</p>
+<h3 id="notes-search"><code>search(query, limit = 20)</code><a class="anchor" href="#notes-search" aria-label="Link to this member">#</a></h3>
+<p>ranked search: words (all must match; name matches count most, then text, then backlinks), or &quot;#tag&quot; → [{ path, score, snippet }]</p>
+<h3 id="notes-overview"><code>overview()</code><a class="anchor" href="#notes-overview" aria-label="Link to this member">#</a></h3>
+<p>a summary of the vault</p>
+<h3 id="notes-links"><code>links(ref)</code><a class="anchor" href="#notes-links" aria-label="Link to this member">#</a></h3>
+<p>a note's link graph: { path, backlinks: [{ path, line }], outgoing, unresolved, tags }</p>
+<h3 id="notes-rename"><code>rename(ref, to)</code><a class="anchor" href="#notes-rename" aria-label="Link to this member">#</a></h3>
+<ul><li><strong>returns</strong> <span class="ty">{ from, to, updated: string[] </span> }</li></ul>
+<p>Rename or move a note and update every link to it ([[Old]] → [[New]], aliases and headings kept; markdown links too).</p>
+<h3 id="notes-fill"><code>fill(text, { title = '', date = new Date()</code><a class="anchor" href="#notes-fill" aria-label="Link to this member">#</a></h3>
+<p>fill a template: {{title}}, {{date}}, {{date:FORMAT}}, {{time}}, {{time:FORMAT}}, {{yesterday}}, {{tomorrow}}, and vars</p>
+<h3 id="notes-create"><code>create(path, { template = null, content = '', vars = {}, date = new Date()</code><a class="anchor" href="#notes-create" aria-label="Link to this member">#</a></h3>
+<p>make a note from a template (a name in the templates folder, or a path) → its path</p>
+<h3 id="notes-daily"><code>daily(date = new Date()</code><a class="anchor" href="#notes-daily" aria-label="Link to this member">#</a></h3>
+<p>today's (or a date's) daily note, made from templates/Daily.md when there is one → its path</p>
+<h3 id="notes-tasks"><code>tasks({ done = false } = {})</code><a class="anchor" href="#notes-tasks" aria-label="Link to this member">#</a></h3>
+<p>open tasks (- [ ] …) across the notes: [{ path, line, text }]</p>
+</article>
+
+<footer>Jade Agent Kit v3.0.0 · MIT · <a href="https://github.com/lucky-edgelord/Jade-agent-kit/blob/main/src/notes.js">Edit the source</a> · generated by <code>scripts/docs.mjs</code></footer>
+</main>
+</div>
+<script src="assets/docs.js" defer></script>
+</body>
+</html>

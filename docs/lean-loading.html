@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lean loading · Jade Agent Kit</title>
+<meta name="description" content="A lean, CDN-delivered browser workspace for AI agents: shell, files, Python, JavaScript, SQLite, search, memory, automation and a pi-style agent.">
+<link rel="stylesheet" href="assets/docs.css">
+<script>try{var t=localStorage.getItem('jak-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+<header class="top">
+  <button class="menu-btn" aria-label="Menu" aria-expanded="false" aria-controls="side">☰</button>
+  <a class="brand" href="index.html">Jade Agent Kit</a><span class="ver">v3.0.0</span>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs  ( / )" autocomplete="off" aria-label="Search the docs"><div id="results" role="listbox" hidden></div></div>
+  <button class="theme" aria-label="Toggle light and dark">Theme</button>
+  <a class="gh" href="https://github.com/lucky-edgelord/Jade-agent-kit">GitHub</a>
+</header>
+<div class="wrap">
+<aside id="side"><div class="grp"><h2>Start</h2><ul><li><a href="index.html">Jade Agent Kit</a></li><li><a href="quick-start.html">Quick start</a></li><li><a href="lean-loading.html" aria-current="page">Lean loading</a></li></ul></div>
+<div class="grp"><h2>Guides</h2><ul><li><a href="create-kit.html">createKit options</a></li><li><a href="files.html">Files: kit.vfs</a></li><li><a href="shell.html">Shell: kit.run, kit.shell</a></li><li><a href="python.html">Python: kit.python</a></li><li><a href="javascript.html">JavaScript: kit.js</a></li><li><a href="sqlite.html">SQLite: kit.sqlite</a></li><li><a href="bm25.html">BM25: kit.bm25</a></li><li><a href="machine-learning.html">Machine learning: kit.ml</a></li><li><a href="webxdc.html">webxdc: kit.webxdc</a></li><li><a href="decisions.html">Decisions: kit.decide, kit.decisions</a></li><li><a href="scheduling-and-tasks.html">Scheduling and tasks: kit.schedule, kit.cron, kit.tasks</a></li><li><a href="sentry.html">Sentry: kit.sentry</a></li><li><a href="embeddings-and-vector-search.html">Embeddings and vector search: kit.embed, kit.vectors</a></li><li><a href="tools-for-llms.html">Tools for LLMs: kit.tools</a></li><li><a href="the-agent.html">The agent: kit.agent()</a></li><li><a href="the-agent-brain.html">The agent brain: kit.agent({ brain })</a></li><li><a href="automation.html">Automation</a></li><li><a href="notes-senses-and-devices.html">Notes, senses and devices</a></li></ul></div>
+<div class="grp"><h2>Reference</h2><ul><li><a href="features.html">Features and sizes</a></li><li><a href="tools.html">Tools</a></li><li class="mods"><details><summary>Modules</summary><ul><li><a href="module-jade-agent-kit.html">jade-agent-kit</a></li><li><a href="module-agent.html">agent</a></li><li><a href="module-autonomy.html">autonomy</a></li><li><a href="module-backup.html">backup</a></li><li><a href="module-bm25.html">bm25</a></li><li><a href="module-brain.html">brain</a></li><li><a href="module-busybox.html">busybox</a></li><li><a href="module-curiosity.html">curiosity</a></li><li><a href="module-decide.html">decide</a></li><li><a href="module-delegate.html">delegate</a></li><li><a href="module-flows.html">flows</a></li><li><a href="module-gantt.html">gantt</a></li><li><a href="module-guard.html">guard</a></li><li><a href="module-heartbeat.html">heartbeat</a></li><li><a href="module-history.html">history</a></li><li><a href="module-http.html">http</a></li><li><a href="module-js.html">js</a></li><li><a href="module-knowledge.html">knowledge</a></li><li><a href="module-lisp.html">lisp</a></li><li><a href="module-mcp.html">mcp</a></li><li><a href="module-memory.html">memory</a></li><li><a href="module-ml.html">ml</a></li><li><a href="module-notes.html">notes</a></li><li><a href="module-ollama.html">ollama</a></li><li><a href="module-playbooks.html">playbooks</a></li><li><a href="module-python.html">python</a></li><li><a href="module-router.html">router</a></li><li><a href="module-schedule.html">schedule</a></li><li><a href="module-secrets.html">secrets</a></li><li><a href="module-senses.html">senses</a></li><li><a href="module-sentry.html">sentry</a></li><li><a href="module-sentry-engine.html">sentry-engine</a></li><li><a href="module-shell.html">shell</a></li><li><a href="module-skills.html">skills</a></li><li><a href="module-sqlite.html">sqlite</a></li><li><a href="module-tasks.html">tasks</a></li><li><a href="module-think.html">think</a></li><li><a href="module-tools.html">tools</a></li><li><a href="module-usb.html">usb</a></li><li><a href="module-vectors.html">vectors</a></li><li><a href="module-vfs.html">vfs</a></li><li><a href="module-webxdc.html">webxdc</a></li></ul></details></li></ul></div>
+<div class="grp"><h2>More</h2><ul><li><a href="things-to-know.html">Things to know</a></li><li><a href="development.html">Development</a></li><li><a href="license.html">License</a></li><li><a href="changelog.html">Changelog</a></li></ul></div></aside>
+<main>
+<article>
+<p><code>createKit()</code> sets up the file system and nothing else. A feature is downloaded the first time it is used:</p>
+<pre><code class="language-js"><span class="k">const</span> py = <span class="k">await</span> kit.use(<span class="s">'python'</span>);               // the Python runner (also kit.python <span class="k">from</span> now on)
+<span class="k">const</span> [db, bm] = <span class="k">await</span> kit.use(<span class="s">'sqlite'</span>, <span class="s">'bm25'</span>);
+<span class="k">await</span> createKit({ use: [<span class="s">'shell'</span>, <span class="s">'sqlite'</span>] });     // load some up front
+<span class="k">await</span> createKit({ use: <span class="s">'all'</span> });                   // everything, like v1
+kit.has(<span class="s">'python'</span>);                                 // loaded yet?
+</code></pre>
+<p>The helpers load what they need: <code>kit.run()</code> (shell), <code>kit.tool()</code> (tools + the feature behind the tool),
+<code>kit.decide()</code>, <code>kit.embed()</code>, <code>kit.agent()</code>. Every module also works on its own, without <code>createKit</code>:</p>
+<pre><code class="language-js"><span class="k">import</span> { BM25 } <span class="k">from</span> <span class="s">'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v3.0.0/dist/bm25.js'</span>;
+<span class="k">import</span> { SentryEngine } <span class="k">from</span> <span class="s">'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v3.0.0/dist/sentry-engine.js'</span>;
+</code></pre>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Feature (<code>kit.use(…)</code>)</th>
+<th>File</th>
+<th>Size (gzip, with what it imports)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>core: <code>createKit</code>, file system</td>
+<td><code>jade-agent-kit.js</code></td>
+<td>6.6 KB</td>
+</tr>
+<tr>
+<td><code>shell</code> (+ <code>busybox</code>)</td>
+<td><code>shell.js</code>, <code>busybox.js</code></td>
+<td>12.6 KB + 5.0 KB, then BusyBox&#39;s ~300 KB WebAssembly</td>
+</tr>
+<tr>
+<td><code>js</code></td>
+<td><code>js.js</code></td>
+<td>13.3 KB</td>
+</tr>
+<tr>
+<td><code>python</code></td>
+<td><code>python.js</code></td>
+<td>8.5 KB, then MicroPython (~0.5 MB) from jsDelivr</td>
+</tr>
+<tr>
+<td><code>sqlite</code></td>
+<td><code>sqlite.js</code></td>
+<td>9.0 KB, then SQLite + sqlite-vec (~900 KB WebAssembly)</td>
+</tr>
+<tr>
+<td><code>bm25</code></td>
+<td><code>bm25.js</code></td>
+<td>2.1 KB</td>
+</tr>
+<tr>
+<td><code>ml</code></td>
+<td><code>ml.js</code></td>
+<td>4.7 KB, then each runtime from jsDelivr when used</td>
+</tr>
+<tr>
+<td><code>webxdc</code></td>
+<td><code>webxdc.js</code></td>
+<td>9.2 KB</td>
+</tr>
+<tr>
+<td><code>ollama</code></td>
+<td><code>ollama.js</code></td>
+<td>2.2 KB</td>
+</tr>
+<tr>
+<td><code>vectors</code></td>
+<td><code>vectors.js</code></td>
+<td>3.4 KB (+ <code>sqlite</code>, <code>ollama</code>)</td>
+</tr>
+<tr>
+<td><code>decisions</code></td>
+<td><code>decide.js</code></td>
+<td>4.6 KB</td>
+</tr>
+<tr>
+<td><code>tasks</code>, <code>cron</code>, <code>schedule</code></td>
+<td><code>tasks.js</code>, <code>schedule.js</code></td>
+<td>1.3 KB, 5.1 KB</td>
+</tr>
+<tr>
+<td><code>sentry</code></td>
+<td><code>sentry.js</code> (engine alone: <code>sentry-engine.js</code>)</td>
+<td>9.8 KB (4.2 KB)</td>
+</tr>
+<tr>
+<td><code>tools</code></td>
+<td><code>tools.js</code></td>
+<td>8.3 KB</td>
+</tr>
+<tr>
+<td>agent (<code>kit.agent()</code>)</td>
+<td><code>agent.js</code></td>
+<td>2.3 KB (+ <code>tools</code>, <code>ollama</code>)</td>
+</tr>
+<tr>
+<td>brain: <code>memory</code></td>
+<td><code>memory.js</code></td>
+<td>7.2 KB</td>
+</tr>
+<tr>
+<td>brain: <code>knowledge</code></td>
+<td><code>knowledge.js</code></td>
+<td>5.7 KB, then the reasoner (~400 KB WebAssembly)</td>
+</tr>
+<tr>
+<td>brain: <code>think</code></td>
+<td><code>think.js</code></td>
+<td>11.2 KB</td>
+</tr>
+<tr>
+<td>brain: <code>delegate</code>, <code>skills</code>, <code>history</code></td>
+<td><code>delegate.js</code>, <code>skills.js</code>, <code>history.js</code></td>
+<td>3.8 KB, 5.4 KB, 5.5 KB</td>
+</tr>
+<tr>
+<td>brain: <code>guard</code>, <code>router</code>, <code>models</code></td>
+<td><code>guard.js</code>, <code>router.js</code></td>
+<td>4.0 KB, 4.4 KB</td>
+</tr>
+<tr>
+<td><code>flows</code>, <code>playbooks</code></td>
+<td><code>flows.js</code>, <code>playbooks.js</code></td>
+<td>15.6 KB, 15.3 KB</td>
+</tr>
+<tr>
+<td><code>gantt</code>, <code>autonomy</code></td>
+<td><code>gantt.js</code>, <code>autonomy.js</code></td>
+<td>4.7 KB, 6.5 KB</td>
+</tr>
+<tr>
+<td><code>heartbeat</code>, <code>curiosity</code>, <code>secrets</code></td>
+<td><code>heartbeat.js</code>, <code>curiosity.js</code>, <code>secrets.js</code></td>
+<td>2.2 KB, 6.0 KB, 2.8 KB</td>
+</tr>
+<tr>
+<td><code>lisp</code></td>
+<td><code>lisp.js</code></td>
+<td>3.2 KB, then the interpreter (~50 KB)</td>
+</tr>
+<tr>
+<td><code>notes</code></td>
+<td><code>notes.js</code></td>
+<td>6.3 KB</td>
+</tr>
+<tr>
+<td><code>http</code>, <code>mcp</code></td>
+<td><code>http.js</code>, <code>mcp.js</code></td>
+<td>3.2 KB, 5.0 KB</td>
+</tr>
+<tr>
+<td><code>senses</code>, <code>usb</code>, <code>backup</code></td>
+<td><code>senses.js</code>, <code>usb.js</code>, <code>backup.js</code></td>
+<td>4.1 KB, 2.2 KB, 3.1 KB</td>
+</tr>
+</tbody></table></div>
+<p>Shared code goes into small <code>chunk-*.js</code> files, so two features never download the same code twice. The kit finds
+<code>assets/</code> next to the file you imported; to host everything yourself, copy <code>dist/</code> and <code>assets/</code> together, or pass
+<code>createKit({ assetsBase: &#39;/static/jak-assets/&#39; })</code>; <code>createKit({ cdn })</code> changes where the runtimes loaded on demand
+come from.</p>
+<h2 id="as-lean-as-you-want">As lean as you want<a class="anchor" href="#as-lean-as-you-want" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><strong>Just one piece</strong>: import a module file and skip <code>createKit</code> (<code>bm25.js</code>, <code>sentry-engine.js</code>, <code>vfs.js</code>, …).</li>
+<li><strong>A workspace</strong>: <code>createKit()</code> is the file system and a loader (5.8 KB); nothing else downloads until used.</li>
+<li><strong>An agent</strong>: <code>kit.agent()</code> is pi-style (six tools, ~2 KB on top of the tools); no brain unless you pass <code>brain</code>.</li>
+<li><strong>A brain</strong>: <code>kit.agent({ brain: [&#39;memory&#39;] })</code> loads memory and nothing else; <code>brain: true</code> is memory, skills,
+history and the context guard; <code>&#39;all&#39;</code> is everything. Each part also works without an agent (<code>kit.use(&#39;memory&#39;)</code>).</li>
+</ul>
+
+</article>
+<nav class="pager" aria-label="Pages"><a class="prev" href="quick-start.html"><span>Previous</span>Quick start</a><a class="next" href="create-kit.html"><span>Next</span>createKit options</a></nav>
+<footer>Jade Agent Kit v3.0.0 · MIT · <a href="https://github.com/lucky-edgelord/Jade-agent-kit/blob/main/README.md">Edit the source</a> · generated by <code>scripts/docs.mjs</code></footer>
+</main>
+</div>
+<script src="assets/docs.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The agent brain: kit.agent({ brain }) · Jade Agent Kit</title>
+<meta name="description" content="A lean, CDN-delivered browser workspace for AI agents: shell, files, Python, JavaScript, SQLite, search, memory, automation and a pi-style agent.">
+<link rel="stylesheet" href="assets/docs.css">
+<script>try{var t=localStorage.getItem('jak-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+<header class="top">
+  <button class="menu-btn" aria-label="Menu" aria-expanded="false" aria-controls="side">☰</button>
+  <a class="brand" href="index.html">Jade Agent Kit</a><span class="ver">v3.0.0</span>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs  ( / )" autocomplete="off" aria-label="Search the docs"><div id="results" role="listbox" hidden></div></div>
+  <button class="theme" aria-label="Toggle light and dark">Theme</button>
+  <a class="gh" href="https://github.com/lucky-edgelord/Jade-agent-kit">GitHub</a>
+</header>
+<div class="wrap">
+<aside id="side"><div class="grp"><h2>Start</h2><ul><li><a href="index.html">Jade Agent Kit</a></li><li><a href="quick-start.html">Quick start</a></li><li><a href="lean-loading.html">Lean loading</a></li></ul></div>
+<div class="grp"><h2>Guides</h2><ul><li><a href="create-kit.html">createKit options</a></li><li><a href="files.html">Files: kit.vfs</a></li><li><a href="shell.html">Shell: kit.run, kit.shell</a></li><li><a href="python.html">Python: kit.python</a></li><li><a href="javascript.html">JavaScript: kit.js</a></li><li><a href="sqlite.html">SQLite: kit.sqlite</a></li><li><a href="bm25.html">BM25: kit.bm25</a></li><li><a href="machine-learning.html">Machine learning: kit.ml</a></li><li><a href="webxdc.html">webxdc: kit.webxdc</a></li><li><a href="decisions.html">Decisions: kit.decide, kit.decisions</a></li><li><a href="scheduling-and-tasks.html">Scheduling and tasks: kit.schedule, kit.cron, kit.tasks</a></li><li><a href="sentry.html">Sentry: kit.sentry</a></li><li><a href="embeddings-and-vector-search.html">Embeddings and vector search: kit.embed, kit.vectors</a></li><li><a href="tools-for-llms.html">Tools for LLMs: kit.tools</a></li><li><a href="the-agent.html">The agent: kit.agent()</a></li><li><a href="the-agent-brain.html" aria-current="page">The agent brain: kit.agent({ brain })</a></li><li><a href="automation.html">Automation</a></li><li><a href="notes-senses-and-devices.html">Notes, senses and devices</a></li></ul></div>
+<div class="grp"><h2>Reference</h2><ul><li><a href="features.html">Features and sizes</a></li><li><a href="tools.html">Tools</a></li><li class="mods"><details><summary>Modules</summary><ul><li><a href="module-jade-agent-kit.html">jade-agent-kit</a></li><li><a href="module-agent.html">agent</a></li><li><a href="module-autonomy.html">autonomy</a></li><li><a href="module-backup.html">backup</a></li><li><a href="module-bm25.html">bm25</a></li><li><a href="module-brain.html">brain</a></li><li><a href="module-busybox.html">busybox</a></li><li><a href="module-curiosity.html">curiosity</a></li><li><a href="module-decide.html">decide</a></li><li><a href="module-delegate.html">delegate</a></li><li><a href="module-flows.html">flows</a></li><li><a href="module-gantt.html">gantt</a></li><li><a href="module-guard.html">guard</a></li><li><a href="module-heartbeat.html">heartbeat</a></li><li><a href="module-history.html">history</a></li><li><a href="module-http.html">http</a></li><li><a href="module-js.html">js</a></li><li><a href="module-knowledge.html">knowledge</a></li><li><a href="module-lisp.html">lisp</a></li><li><a href="module-mcp.html">mcp</a></li><li><a href="module-memory.html">memory</a></li><li><a href="module-ml.html">ml</a></li><li><a href="module-notes.html">notes</a></li><li><a href="module-ollama.html">ollama</a></li><li><a href="module-playbooks.html">playbooks</a></li><li><a href="module-python.html">python</a></li><li><a href="module-router.html">router</a></li><li><a href="module-schedule.html">schedule</a></li><li><a href="module-secrets.html">secrets</a></li><li><a href="module-senses.html">senses</a></li><li><a href="module-sentry.html">sentry</a></li><li><a href="module-sentry-engine.html">sentry-engine</a></li><li><a href="module-shell.html">shell</a></li><li><a href="module-skills.html">skills</a></li><li><a href="module-sqlite.html">sqlite</a></li><li><a href="module-tasks.html">tasks</a></li><li><a href="module-think.html">think</a></li><li><a href="module-tools.html">tools</a></li><li><a href="module-usb.html">usb</a></li><li><a href="module-vectors.html">vectors</a></li><li><a href="module-vfs.html">vfs</a></li><li><a href="module-webxdc.html">webxdc</a></li></ul></details></li></ul></div>
+<div class="grp"><h2>More</h2><ul><li><a href="things-to-know.html">Things to know</a></li><li><a href="development.html">Development</a></li><li><a href="license.html">License</a></li><li><a href="changelog.html">Changelog</a></li></ul></div></aside>
+<main>
+<article>
+<p>Each part is a feature of its own (its file downloads on first use), adds its tool to the agent, and plugs into the
+agent loop. Files live under <code>/.kit/</code> in the kit&#39;s file system, as plain text your app or its users can read and edit
+(persist the kit to keep them).</p>
+<pre><code class="language-js"><span class="k">const</span> kit = <span class="k">await</span> createKit({ persist: <span class="s">'my-app'</span>, ollamaKey, memory: { journal: <span class="k">true</span> } });
+<span class="k">const</span> agent = <span class="k">await</span> kit.agent({ brain: [<span class="s">'memory'</span>, <span class="s">'skills'</span>, <span class="s">'history'</span>, <span class="s">'guard'</span>] });   // or brain: <span class="k">true</span>
+<span class="k">await</span> agent.prompt(<span class="s">'Remember that I take my coffee black'</span>);
+<span class="k">const</span> later = <span class="k">await</span> kit.agent({ brain: <span class="k">true</span>, resume: agent.id });                    // carry on a saved chat
+</code></pre>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Tool</th>
+<th>What it does</th>
+<th>Options (<code>createKit({ &lt;part&gt;: {…} })</code>)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>memory</code></td>
+<td><code>memory</code></td>
+<td><code>/.kit/memory/Memory.md</code>: facts under sections, the best matches for each message in the prompt (BM25; by meaning too with <code>embed</code>). Never keeps anything that looks like a password or key. With <code>journal: true</code>, the model writes a journal entry after each prompt and the durable facts it names are remembered.</td>
+<td><code>root</code>, <code>rag</code> (8 lines; 0: newest up to <code>budget</code>), <code>embed</code> (an Ollama embedding model), <code>journal</code></td>
+</tr>
+<tr>
+<td><code>knowledge</code></td>
+<td><code>knowledge</code></td>
+<td>Facts (<code>works_at(alice, acme)</code>), rules and constraints, and Jade&#39;s Rust reasoner: <code>verify</code> gives ✓ proven (with its proof), ✗ contradicted or ? unknown. The agent&#39;s facts are <em>proposed</em> until you <code>confirm()</code> them, and proofs say when they rest on unconfirmed facts.</td>
+<td><code>root</code>, <code>verifyMode</code></td>
+</tr>
+<tr>
+<td><code>think</code></td>
+<td><code>think</code></td>
+<td>Tree of thoughts with verification: branches approaches, checks each with code, a shell command, a file, a rubric, a decision model or a self-review. A failed hard check is a veto. <code>auto</code> runs the whole search.</td>
+<td><code>root</code></td>
+</tr>
+<tr>
+<td><code>delegate</code></td>
+<td><code>delegate</code></td>
+<td>A sub-agent with a clean context, read-only unless <code>write: true</code>, capped in steps and seconds; returns one report.</td>
+<td><code>read</code>, <code>write</code> (tool lists), <code>maxSteps</code>, <code>seconds</code></td>
+</tr>
+<tr>
+<td><code>skills</code></td>
+<td><code>skill</code>, <code>find_skill</code></td>
+<td><code>/.kit/SOUL.md</code> (persona), <code>/AGENTS.md</code> (standing instructions), <code>/.kit/SYSTEM.md</code> (replaces the base prompt), <code>/.kit/skills/&lt;name&gt;/SKILL.md</code>. Past 15 skills only the best matches are listed. <code>skills.expand(&#39;/skill:name …&#39;)</code> for slash commands, <code>skills.seed()</code> adds a skill-creator.</td>
+<td><code>root</code>, <code>allMax</code>, <code>top</code>, <code>embed</code>, <code>off</code></td>
+</tr>
+<tr>
+<td><code>history</code></td>
+<td><code>chat_history</code></td>
+<td>Saves each chat after every prompt; list, read and search them.</td>
+<td><code>root</code>, <code>max</code></td>
+</tr>
+<tr>
+<td><code>guard</code></td>
+<td>—</td>
+<td>Estimates every request; compacts old turns into a summary when the chat nears the window, trims if still too big, learns a model&#39;s real limit from &quot;prompt is too long&quot; and retries.</td>
+<td><code>limit</code>, <code>localLimit</code>, <code>compactAt</code>, <code>keepTurns</code></td>
+</tr>
+<tr>
+<td><code>router</code></td>
+<td><code>more_tools</code></td>
+<td>Sends only the tools a message needs (core tools always); the rest stay behind <code>more_tools</code>.</td>
+<td><code>core</code>, <code>hints</code>, <code>max</code>, <code>minSaving</code></td>
+</tr>
+<tr>
+<td><code>models</code></td>
+<td>—</td>
+<td>A decision model picks which model answers each prompt, from a note on what each is good at.</td>
+<td><code>createKit({ models: [{ model, note, provider? }] })</code></td>
+</tr>
+</tbody></table></div>
+<p>Every part works without an agent too: <code>const mem = await kit.use(&#39;memory&#39;); await mem.search(&#39;coffee&#39;)</code>,
+<code>(await kit.use(&#39;knowledge&#39;)).verify(&#39;above(carl, alice)&#39;)</code>, <code>kit.history.list()</code>, <code>kit.guard.compact(messages)</code>.</p>
+<p>Write your own plugin with the same hooks (<code>kit.agent({ plugins: [{ … }] })</code>): <code>tools</code> (names to add), <code>system(agent, { query })</code> (prompt text), <code>route(agent)</code> (<code>{ client, model }</code>), <code>select(agent, names)</code> (tools for a step),
+<code>prepare(agent, { messages })</code> (the request), <code>recover(agent, error)</code> (<code>true</code> retries once), <code>after(agent, { text })</code>.
+<code>kit.complete({ prompt | messages, system, json })</code> gets one answer from the kit&#39;s model (<code>createKit({ provider, model })</code>).</p>
+
+</article>
+<nav class="pager" aria-label="Pages"><a class="prev" href="the-agent.html"><span>Previous</span>The agent: kit.agent()</a><a class="next" href="automation.html"><span>Next</span>Automation</a></nav>
+<footer>Jade Agent Kit v3.0.0 · MIT · <a href="https://github.com/lucky-edgelord/Jade-agent-kit/blob/main/README.md">Edit the source</a> · generated by <code>scripts/docs.mjs</code></footer>
+</main>
+</div>
+<script src="assets/docs.js" defer></script>
+</body>
+</html>

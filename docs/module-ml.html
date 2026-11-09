@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ml.js · Jade Agent Kit</title>
+<meta name="description" content="A lean, CDN-delivered browser workspace for AI agents: shell, files, Python, JavaScript, SQLite, search, memory, automation and a pi-style agent.">
+<link rel="stylesheet" href="assets/docs.css">
+<script>try{var t=localStorage.getItem('jak-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+<header class="top">
+  <button class="menu-btn" aria-label="Menu" aria-expanded="false" aria-controls="side">☰</button>
+  <a class="brand" href="index.html">Jade Agent Kit</a><span class="ver">v3.0.0</span>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs  ( / )" autocomplete="off" aria-label="Search the docs"><div id="results" role="listbox" hidden></div></div>
+  <button class="theme" aria-label="Toggle light and dark">Theme</button>
+  <a class="gh" href="https://github.com/lucky-edgelord/Jade-agent-kit">GitHub</a>
+</header>
+<div class="wrap">
+<aside id="side"><div class="grp"><h2>Start</h2><ul><li><a href="index.html">Jade Agent Kit</a></li><li><a href="quick-start.html">Quick start</a></li><li><a href="lean-loading.html">Lean loading</a></li></ul></div>
+<div class="grp"><h2>Guides</h2><ul><li><a href="create-kit.html">createKit options</a></li><li><a href="files.html">Files: kit.vfs</a></li><li><a href="shell.html">Shell: kit.run, kit.shell</a></li><li><a href="python.html">Python: kit.python</a></li><li><a href="javascript.html">JavaScript: kit.js</a></li><li><a href="sqlite.html">SQLite: kit.sqlite</a></li><li><a href="bm25.html">BM25: kit.bm25</a></li><li><a href="machine-learning.html">Machine learning: kit.ml</a></li><li><a href="webxdc.html">webxdc: kit.webxdc</a></li><li><a href="decisions.html">Decisions: kit.decide, kit.decisions</a></li><li><a href="scheduling-and-tasks.html">Scheduling and tasks: kit.schedule, kit.cron, kit.tasks</a></li><li><a href="sentry.html">Sentry: kit.sentry</a></li><li><a href="embeddings-and-vector-search.html">Embeddings and vector search: kit.embed, kit.vectors</a></li><li><a href="tools-for-llms.html">Tools for LLMs: kit.tools</a></li><li><a href="the-agent.html">The agent: kit.agent()</a></li><li><a href="the-agent-brain.html">The agent brain: kit.agent({ brain })</a></li><li><a href="automation.html">Automation</a></li><li><a href="notes-senses-and-devices.html">Notes, senses and devices</a></li></ul></div>
+<div class="grp"><h2>Reference</h2><ul><li><a href="features.html">Features and sizes</a></li><li><a href="tools.html">Tools</a></li><li class="mods"><details open><summary>Modules</summary><ul><li><a href="module-jade-agent-kit.html">jade-agent-kit</a></li><li><a href="module-agent.html">agent</a></li><li><a href="module-autonomy.html">autonomy</a></li><li><a href="module-backup.html">backup</a></li><li><a href="module-bm25.html">bm25</a></li><li><a href="module-brain.html">brain</a></li><li><a href="module-busybox.html">busybox</a></li><li><a href="module-curiosity.html">curiosity</a></li><li><a href="module-decide.html">decide</a></li><li><a href="module-delegate.html">delegate</a></li><li><a href="module-flows.html">flows</a></li><li><a href="module-gantt.html">gantt</a></li><li><a href="module-guard.html">guard</a></li><li><a href="module-heartbeat.html">heartbeat</a></li><li><a href="module-history.html">history</a></li><li><a href="module-http.html">http</a></li><li><a href="module-js.html">js</a></li><li><a href="module-knowledge.html">knowledge</a></li><li><a href="module-lisp.html">lisp</a></li><li><a href="module-mcp.html">mcp</a></li><li><a href="module-memory.html">memory</a></li><li><a href="module-ml.html" aria-current="page">ml</a></li><li><a href="module-notes.html">notes</a></li><li><a href="module-ollama.html">ollama</a></li><li><a href="module-playbooks.html">playbooks</a></li><li><a href="module-python.html">python</a></li><li><a href="module-router.html">router</a></li><li><a href="module-schedule.html">schedule</a></li><li><a href="module-secrets.html">secrets</a></li><li><a href="module-senses.html">senses</a></li><li><a href="module-sentry.html">sentry</a></li><li><a href="module-sentry-engine.html">sentry-engine</a></li><li><a href="module-shell.html">shell</a></li><li><a href="module-skills.html">skills</a></li><li><a href="module-sqlite.html">sqlite</a></li><li><a href="module-tasks.html">tasks</a></li><li><a href="module-think.html">think</a></li><li><a href="module-tools.html">tools</a></li><li><a href="module-usb.html">usb</a></li><li><a href="module-vectors.html">vectors</a></li><li><a href="module-vfs.html">vfs</a></li><li><a href="module-webxdc.html">webxdc</a></li></ul></details></li></ul></div>
+<div class="grp"><h2>More</h2><ul><li><a href="things-to-know.html">Things to know</a></li><li><a href="development.html">Development</a></li><li><a href="license.html">License</a></li><li><a href="changelog.html">Changelog</a></li></ul></div></aside>
+<main>
+<article>
+<h1><code>ml.js</code></h1>
+<dl class="facts"><dt>Source</dt><dd><a href="https://github.com/lucky-edgelord/Jade-agent-kit/blob/main/src/ml.js"><code>src/ml.js</code></a></dd><dt>Size</dt><dd>4.6 KB gzipped (9.4 KB raw), with the chunks it imports</dd><dt>Load</dt><dd><code>kit.use('ml')</code></dd></dl>
+<p>Machine learning runtimes, each downloaded from jsDelivr (pinned) the first time it is used:</p>
+<pre><code>TensorFlow.js 4.22 (WebGPU → WebGL → CPU), ONNX Runtime Web 1.31.1 (WebGPU or WebAssembly),
+LiteRT.js 2.5.3 for .tflite models (WebGPU or WebAssembly).</code></pre>
+<p>On its own, without <code>createKit</code>:</p>
+<pre><code><span class="k">import</span> * as m <span class="k">from</span> <span class="s">'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v3.0.0/dist/ml.js'</span>;</code></pre>
+<h2 id="api-reference" class="plain">Documented API</h2>
+<p>Methods with a doc comment in the source. The <a href="https://github.com/lucky-edgelord/Jade-agent-kit/blob/main/src/ml.js">source</a> has the rest.</p>
+<h2 id="ml"><code>ML</code></h2>
+<h3 id="ml-tf"><code>async tf({ backend } = {})</code><a class="anchor" href="#ml-tf" aria-label="Link to this member">#</a></h3>
+<p>TensorFlow.js on this page (window.tf), with the fastest backend that works</p>
+<h3 id="ml-tfjssource"><code>tfjsSource()</code><a class="anchor" href="#ml-tfjssource" aria-label="Link to this member">#</a></h3>
+<p>TensorFlow.js as source text (for scripts in a worker)</p>
+<h3 id="ml-onnx"><code>async onnx(src, { accelerator } = {})</code><a class="anchor" href="#ml-onnx" aria-label="Link to this member">#</a></h3>
+<ul><li><strong>returns</strong> <span class="ty">Promise&lt;{ accelerator: string, inputs: object[], outputs: object[], run: (inputs: object|any[]) =&gt; Promise&lt;object&gt;, release: () =&gt; Promise&lt;void&gt; </span> &gt;}</li></ul>
+<p>Load an .onnx model (VFS path, URL or bytes).</p>
+<h3 id="ml-tflite"><code>async tflite(src, { accelerator } = {})</code><a class="anchor" href="#ml-tflite" aria-label="Link to this member">#</a></h3>
+<ul><li><strong>returns</strong> <span class="ty">Promise&lt;{ accelerator: string, inputs: object[], outputs: object[], run: (inputs: any[]) =&gt; Promise&lt;object[]&gt;, delete: () =&gt; void </span> &gt;}</li></ul>
+<p>Load a .tflite model (VFS path, URL or bytes).</p>
+</article>
+
+<footer>Jade Agent Kit v3.0.0 · MIT · <a href="https://github.com/lucky-edgelord/Jade-agent-kit/blob/main/src/ml.js">Edit the source</a> · generated by <code>scripts/docs.mjs</code></footer>
+</main>
+</div>
+<script src="assets/docs.js" defer></script>
+</body>
+</html>

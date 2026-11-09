@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>skills.js · Jade Agent Kit</title>
+<meta name="description" content="A lean, CDN-delivered browser workspace for AI agents: shell, files, Python, JavaScript, SQLite, search, memory, automation and a pi-style agent.">
+<link rel="stylesheet" href="assets/docs.css">
+<script>try{var t=localStorage.getItem('jak-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+<header class="top">
+  <button class="menu-btn" aria-label="Menu" aria-expanded="false" aria-controls="side">☰</button>
+  <a class="brand" href="index.html">Jade Agent Kit</a><span class="ver">v3.0.0</span>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs  ( / )" autocomplete="off" aria-label="Search the docs"><div id="results" role="listbox" hidden></div></div>
+  <button class="theme" aria-label="Toggle light and dark">Theme</button>
+  <a class="gh" href="https://github.com/lucky-edgelord/Jade-agent-kit">GitHub</a>
+</header>
+<div class="wrap">
+<aside id="side"><div class="grp"><h2>Start</h2><ul><li><a href="index.html">Jade Agent Kit</a></li><li><a href="quick-start.html">Quick start</a></li><li><a href="lean-loading.html">Lean loading</a></li></ul></div>
+<div class="grp"><h2>Guides</h2><ul><li><a href="create-kit.html">createKit options</a></li><li><a href="files.html">Files: kit.vfs</a></li><li><a href="shell.html">Shell: kit.run, kit.shell</a></li><li><a href="python.html">Python: kit.python</a></li><li><a href="javascript.html">JavaScript: kit.js</a></li><li><a href="sqlite.html">SQLite: kit.sqlite</a></li><li><a href="bm25.html">BM25: kit.bm25</a></li><li><a href="machine-learning.html">Machine learning: kit.ml</a></li><li><a href="webxdc.html">webxdc: kit.webxdc</a></li><li><a href="decisions.html">Decisions: kit.decide, kit.decisions</a></li><li><a href="scheduling-and-tasks.html">Scheduling and tasks: kit.schedule, kit.cron, kit.tasks</a></li><li><a href="sentry.html">Sentry: kit.sentry</a></li><li><a href="embeddings-and-vector-search.html">Embeddings and vector search: kit.embed, kit.vectors</a></li><li><a href="tools-for-llms.html">Tools for LLMs: kit.tools</a></li><li><a href="the-agent.html">The agent: kit.agent()</a></li><li><a href="the-agent-brain.html">The agent brain: kit.agent({ brain })</a></li><li><a href="automation.html">Automation</a></li><li><a href="notes-senses-and-devices.html">Notes, senses and devices</a></li></ul></div>
+<div class="grp"><h2>Reference</h2><ul><li><a href="features.html">Features and sizes</a></li><li><a href="tools.html">Tools</a></li><li class="mods"><details open><summary>Modules</summary><ul><li><a href="module-jade-agent-kit.html">jade-agent-kit</a></li><li><a href="module-agent.html">agent</a></li><li><a href="module-autonomy.html">autonomy</a></li><li><a href="module-backup.html">backup</a></li><li><a href="module-bm25.html">bm25</a></li><li><a href="module-brain.html">brain</a></li><li><a href="module-busybox.html">busybox</a></li><li><a href="module-curiosity.html">curiosity</a></li><li><a href="module-decide.html">decide</a></li><li><a href="module-delegate.html">delegate</a></li><li><a href="module-flows.html">flows</a></li><li><a href="module-gantt.html">gantt</a></li><li><a href="module-guard.html">guard</a></li><li><a href="module-heartbeat.html">heartbeat</a></li><li><a href="module-history.html">history</a></li><li><a href="module-http.html">http</a></li><li><a href="module-js.html">js</a></li><li><a href="module-knowledge.html">knowledge</a></li><li><a href="module-lisp.html">lisp</a></li><li><a href="module-mcp.html">mcp</a></li><li><a href="module-memory.html">memory</a></li><li><a href="module-ml.html">ml</a></li><li><a href="module-notes.html">notes</a></li><li><a href="module-ollama.html">ollama</a></li><li><a href="module-playbooks.html">playbooks</a></li><li><a href="module-python.html">python</a></li><li><a href="module-router.html">router</a></li><li><a href="module-schedule.html">schedule</a></li><li><a href="module-secrets.html">secrets</a></li><li><a href="module-senses.html">senses</a></li><li><a href="module-sentry.html">sentry</a></li><li><a href="module-sentry-engine.html">sentry-engine</a></li><li><a href="module-shell.html">shell</a></li><li><a href="module-skills.html" aria-current="page">skills</a></li><li><a href="module-sqlite.html">sqlite</a></li><li><a href="module-tasks.html">tasks</a></li><li><a href="module-think.html">think</a></li><li><a href="module-tools.html">tools</a></li><li><a href="module-usb.html">usb</a></li><li><a href="module-vectors.html">vectors</a></li><li><a href="module-vfs.html">vfs</a></li><li><a href="module-webxdc.html">webxdc</a></li></ul></details></li></ul></div>
+<div class="grp"><h2>More</h2><ul><li><a href="things-to-know.html">Things to know</a></li><li><a href="development.html">Development</a></li><li><a href="license.html">License</a></li><li><a href="changelog.html">Changelog</a></li></ul></div></aside>
+<main>
+<article>
+<h1><code>skills.js</code></h1>
+<dl class="facts"><dt>Source</dt><dd><a href="https://github.com/lucky-edgelord/Jade-agent-kit/blob/main/src/skills.js"><code>src/skills.js</code></a></dd><dt>Size</dt><dd>5.4 KB gzipped (11.0 KB raw), with the chunks it imports</dd><dt>Load</dt><dd><code>kit.use('skills')</code></dd><dt>Tools</dt><dd><a href="tools.html#skill"><code>skill</code></a> <a href="tools.html#find-skill"><code>find_skill</code></a></dd></dl>
+<p>Steering and skills, in files (pi style):</p>
+<pre><code>&lt;root&gt;/SOUL.md       persona: voice, values (added to every prompt)
+/AGENTS.md, &lt;root&gt;/AGENTS.md   standing instructions (added to every prompt)
+&lt;root&gt;/SYSTEM.md     optional: replaces the agent's base system prompt
+&lt;root&gt;/skills/&lt;name&gt;/SKILL.md  skills: frontmatter name + description, listed in the prompt, loaded on demand with
+                     the skill tool (or &quot;/skill:name …&quot; in a message, see expand())</code></pre>
+<p>With many skills (more than allMax), each prompt lists only the ones that best fit the message, and the agent gets a find_skill tool for the rest (BM25 on name + description; with { embed } also by meaning). HTML comments (&lt;!-- --&gt;) in these files are notes for people and never reach the model.</p>
+<p>On its own, without <code>createKit</code>:</p>
+<pre><code><span class="k">import</span> * as m <span class="k">from</span> <span class="s">'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v3.0.0/dist/skills.js'</span>;</code></pre>
+<h2 id="api-reference" class="plain">Documented API</h2>
+<p>Methods with a doc comment in the source. The <a href="https://github.com/lucky-edgelord/Jade-agent-kit/blob/main/src/skills.js">source</a> has the rest.</p>
+<h2 id="skills"><code>Skills</code></h2>
+<h3 id="skills-constructor"><code>constructor({ kit, root = '/.kit', agentsFiles = null, allMax = 15, top = 6, embed = false, off = [] } = {})</code><a class="anchor" href="#skills-constructor" aria-label="Link to this member">#</a></h3>
+<ul><li><code>o</code> <span class="ty">{ kit: object, root?: string, agentsFiles?: string[], allMax?: number, top?: number, embed?: string|false, off?: string[] }</span> </li></ul>
+<p>allMax: list every skill up to this many (default 15); top: how many to list past that (default 6)<br>embed: an Ollama embedding model to also match skills by meaning; off: skill names to ignore</p>
+<h3 id="skills-seed"><code>seed()</code><a class="anchor" href="#skills-seed" aria-label="Link to this member">#</a></h3>
+<p>write the skill-creator skill (and nothing else) if it is missing</p>
+<h3 id="skills-list"><code>list()</code><a class="anchor" href="#skills-list" aria-label="Link to this member">#</a></h3>
+<p>[{ name, description, path, dir, off }]</p>
+<h3 id="skills-load"><code>load(name, input = '')</code><a class="anchor" href="#skills-load" aria-label="Link to this member">#</a></h3>
+<p>a skill's instructions, as the skill tool returns them</p>
+<h3 id="skills-expand"><code>expand(text)</code><a class="anchor" href="#skills-expand" aria-label="Link to this member">#</a></h3>
+<p>&quot;/skill:name rest of message&quot; → { text, skill } with the skill's instructions in the text; null for other messages</p>
+<h3 id="skills-steering"><code>steering()</code><a class="anchor" href="#skills-steering" aria-label="Link to this member">#</a></h3>
+<p>persona, standing instructions, custom system prompt</p>
+<h3 id="skills-search"><code>async search(query, k = this.top, { strict = false } = {})</code><a class="anchor" href="#skills-search" aria-label="Link to this member">#</a></h3>
+<p>skills that fit a request, best first → { skills, note }</p>
+<h3 id="skills-context"><code>async context(query = '')</code><a class="anchor" href="#skills-context" aria-label="Link to this member">#</a></h3>
+<p>the block for a system prompt: persona, instructions, and the skills (all, or the ones that fit the query)</p>
+<h3 id="skills-plugin"><code>plugin()</code><a class="anchor" href="#skills-plugin" aria-label="Link to this member">#</a></h3>
+<p>an agent plugin: persona, instructions and skills in the prompt; SYSTEM.md replaces the base prompt; the skill tools</p>
+</article>
+
+<footer>Jade Agent Kit v3.0.0 · MIT · <a href="https://github.com/lucky-edgelord/Jade-agent-kit/blob/main/src/skills.js">Edit the source</a> · generated by <code>scripts/docs.mjs</code></footer>
+</main>
+</div>
+<script src="assets/docs.js" defer></script>
+</body>
+</html>
