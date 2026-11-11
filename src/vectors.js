@@ -1,7 +1,8 @@
-// A vector store: texts embedded with Ollama, kept in SQLite with sqlite-vec, searched by meaning (and keywords).
+// A vector store: texts embedded with Ollama (or in the page, for "hf:" models), kept in SQLite with sqlite-vec, searched by meaning (and keywords).
 //   const store = await kit.vectors.open('/data/notes.db');          // or ':memory:'
 //   await store.add([{ id: 'a', text: '…', meta: { … } }, '…']);
 //   await store.search('question', { limit: 5 });                    // [{ id, text, meta, distance, score }]
+import { embedder } from './internal/embed.js';
 import { BM25 } from './bm25.js';
 
 export class VectorStore {
@@ -63,12 +64,11 @@ export function createVectors(kit) {
     /**
      * Open (or create) a vector store in a SQLite file.
      * @param {string} path a VFS path or ':memory:'
-     * @param {{ model?: string, table?: string, ollama?: import('./ollama.js').Ollama }} [o] model: an Ollama embedding model (default embeddinggemma)
+     * @param {{ model?: string, table?: string, ollama?: import('./ollama.js').Ollama }} [o] model: an Ollama embedding model (default embeddinggemma), or "hf:<repo>" to embed in the page with Transformers.js
      */
     async open(path = ':memory:', { model = 'embeddinggemma', table = 'docs', ollama = null } = {}) {
       const db = await (await kit.use('sqlite')).open(path);
-      const client = ollama || (await kit.use('ollama')).local;
-      return new VectorStore(db, (texts, o) => client.embed(texts, o), { model, table }).init();
+      return new VectorStore(db, embedder(kit, model, ollama), { model, table }).init();
     },
   };
 }

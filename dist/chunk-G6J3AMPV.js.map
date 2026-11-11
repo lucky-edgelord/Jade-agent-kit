@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../src/internal/embed.js"],
+  "sourcesContent": ["// Which embedder a model name means: \"hf:<repo>\" runs in the page with Transformers.js, anything else is an Ollama\n// embedding model (on a machine, or the client passed in).\nexport function embedder(kit, model, ollama) {\n  if (String(model || '').startsWith('hf:')) return async (input, o = {}) => (await kit.use('transformers')).embed(input, { ...o, model });\n  return async (input, o = {}) => (ollama || (await kit.use('ollama')).local).embed(input, o);\n}\n"],
+  "mappings": ";AAEO,SAASA,EAASC,EAAKC,EAAOC,EAAQ,CAC3C,OAAI,OAAOD,GAAS,EAAE,EAAE,WAAW,KAAK,EAAU,MAAOE,EAAOC,EAAI,CAAC,KAAO,MAAMJ,EAAI,IAAI,cAAc,GAAG,MAAMG,EAAO,CAAE,GAAGC,EAAG,MAAAH,CAAM,CAAC,EAChI,MAAOE,EAAOC,EAAI,CAAC,KAAOF,IAAW,MAAMF,EAAI,IAAI,QAAQ,GAAG,OAAO,MAAMG,EAAOC,CAAC,CAC5F",
+  "names": ["embedder", "kit", "model", "ollama", "input", "o"]
+}

@@ -10,10 +10,14 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4   # Jade Agent Base, for tests/base_test.mjs
+        with: { repository: lucky-edgelord/jade-agent-base, path: jade-agent-base }
+      - uses: actions/setup-go@v5
+        with: { go-version-file: jade-agent-base/go.mod, cache: false }
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm install --no-audit --no-fund
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install chromium   # the runner has Chrome's libraries; no apt (its mirror can be down)
       - name: build and check dist/ is up to date
         run: |
           node scripts/build.mjs
@@ -23,4 +27,6 @@ jobs:
           node scripts/docs.mjs
           git diff --exit-code -- docs || (echo "docs/ is out of date: run npm run docs and commit it" && exit 1)
       - run: node tests/run.mjs
+        env: { JAB_DIR: jade-agent-base }
       - run: JAK_SRC=1 node tests/run.mjs
+        env: { JAB_DIR: jade-agent-base }

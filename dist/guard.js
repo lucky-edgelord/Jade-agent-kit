@@ -1,5 +1,5 @@
-/*! Jade Agent Kit 3.0.0 | MIT | https://github.com/lucky-edgelord/Jade-agent-kit | bundles code under its own licenses: see THIRD_PARTY_NOTICES.md */
-import{b as p,d}from"./chunk-L3XUYPGW.js";import"./chunk-BN2DZAOB.js";var w=`You are compacting an agent conversation so the work can continue in a fresh context window. Write a concise but complete handoff summary in Markdown with exactly these sections:
+/*! Jade Agent Kit 3.1.0 | MIT | https://github.com/lucky-edgelord/Jade-agent-kit | bundles code under its own licenses: see THIRD_PARTY_NOTICES.md */
+import{b as p,d}from"./chunk-QBAZTYK4.js";import"./chunk-GZEGYG7Y.js";var w=`You are compacting an agent conversation so the work can continue in a fresh context window. Write a concise but complete handoff summary in Markdown with exactly these sections:
 ## Goal
 What the user wants overall.
 ## Progress

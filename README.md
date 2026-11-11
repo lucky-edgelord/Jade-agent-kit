@@ -1,6 +1,6 @@
 # Jade Agent Kit
 
-A browser workspace for AI agents, loaded from a CDN with one import. It is lean: the core is about 6.6 KB gzipped, and
+A browser workspace for AI agents, loaded from a CDN with one import. It is lean: the core is about 7 KB gzipped, and
 each feature below is its own module that downloads only when a page uses it. It gives any web project:
 
 - a **virtual file system** (in memory, optionally kept in IndexedDB) shared by everything below
@@ -28,6 +28,9 @@ each feature below is its own module that downloads only when a page uses it. It
   links, daily notes and templates
 - **senses and devices**: **HTTP** with secrets, **MCP** servers, the camera, microphone, location and other sensors,
   **look** (the agent sees an image), **WebUSB**, and **backups** (gzip, optionally encrypted, to a file or a server)
+- **Hugging Face models** in the page with **Transformers.js** (any pipeline task, and in-browser embeddings)
+- a **server the agent runs**: connect to [Jade Agent Base](https://github.com/lucky-edgelord/jade-agent-base) and its
+  tools (data, server-side code, the website) become the agent's
 
 Its pieces come from [Jade Vault](https://github.com/lucky-edgelord/jade-vault). The examples below use `kit.<feature>`
 after `await kit.use('<feature>')`.
@@ -36,7 +39,7 @@ after `await kit.use('<feature>')`.
 
 ```html
 <script type="module">
-  import { createKit } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v3.0.0/dist/jade-agent-kit.js';
+  import { createKit } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v3.1.0/dist/jade-agent-kit.js';
 
   const kit = await createKit({ persist: 'my-app' });          // loads only the file system; kept in IndexedDB
   kit.vfs.write('/hello.txt', 'hello world\n');
@@ -45,7 +48,7 @@ after `await kit.use('<feature>')`.
 </script>
 ```
 
-Always pin a version (`@v3.0.0`); jsDelivr caches tags permanently. Open `examples/index.html` for a shell and an
+Always pin a version (`@v3.1.0`); jsDelivr caches tags permanently. Open `examples/index.html` for a shell and an
 agent side by side.
 
 ## Lean loading
@@ -64,13 +67,13 @@ The helpers load what they need: `kit.run()` (shell), `kit.tool()` (tools + the 
 `kit.decide()`, `kit.embed()`, `kit.agent()`. Every module also works on its own, without `createKit`:
 
 ```js
-import { BM25 } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v3.0.0/dist/bm25.js';
-import { SentryEngine } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v3.0.0/dist/sentry-engine.js';
+import { BM25 } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v3.1.0/dist/bm25.js';
+import { SentryEngine } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-agent-kit@v3.1.0/dist/sentry-engine.js';
 ```
 
 | Feature (`kit.use(…)`) | File | Size (gzip, with what it imports) |
 | --- | --- | --- |
-| core: `createKit`, file system | `jade-agent-kit.js` | 6.6 KB |
+| core: `createKit`, file system | `jade-agent-kit.js` | 7.0 KB |
 | `shell` (+ `busybox`) | `shell.js`, `busybox.js` | 12.6 KB + 5.0 KB, then BusyBox's ~300 KB WebAssembly |
 | `js` | `js.js` | 13.3 KB |
 | `python` | `python.js` | 8.5 KB, then MicroPython (~0.5 MB) from jsDelivr |
@@ -97,6 +100,8 @@ import { SentryEngine } from 'https://cdn.jsdelivr.net/gh/lucky-edgelord/Jade-ag
 | `notes` | `notes.js` | 6.3 KB |
 | `http`, `mcp` | `http.js`, `mcp.js` | 3.2 KB, 5.0 KB |
 | `senses`, `usb`, `backup` | `senses.js`, `usb.js`, `backup.js` | 4.1 KB, 2.2 KB, 3.1 KB |
+| `transformers` | `transformers.js` | 2.6 KB, then Transformers.js (~450 KB) from jsDelivr and the model from the Hub |
+| `base` | `base.js` | 1.6 KB (+ `mcp`, `secrets`) |
 
 Shared code goes into small `chunk-*.js` files, so two features never download the same code twice. The kit finds
 `assets/` next to the file you imported; to host everything yourself, copy `dist/` and `assets/` together, or pass
@@ -110,6 +115,11 @@ come from.
 - **An agent**: `kit.agent()` is pi-style (six tools, ~2 KB on top of the tools); no brain unless you pass `brain`.
 - **A brain**: `kit.agent({ brain: ['memory'] })` loads memory and nothing else; `brain: true` is memory, skills,
   history and the context guard; `'all'` is everything. Each part also works without an agent (`kit.use('memory')`).
+
+### Changes in v3.1.0 (from v3.0.0)
+
+- New: `transformers` (Transformers.js 4.3.2: Hugging Face models in the page, and `hf:` embedding models everywhere
+  the kit embeds) and `base` (connect to a Jade Agent Base server; its tools become the agent's).
 
 ### Changes in v3.0.0 (from v2.0.0)
 
@@ -491,6 +501,38 @@ await kit2.agent({ brain: ['senses', 'http', 'mcp', 'notes'] });
 | `senses` | `senses`, `look` | Photo, audio recording and loudness, location, motion, battery, network, device facts. Camera, microphone and location only when the app allows them. `look` shows the agent an image on its next step. |
 | `usb` | `usb` | WebUSB: the app calls `usb.request(filters)` from a click; then open, claim, control and bulk transfers. |
 | `backup` | `backup` | The file system (or a folder) as gzip JSON, optionally AES-GCM encrypted with a passphrase; `download()`, `restore(bytes, { mode: 'merge'|'replace' })`, and a backup server (`upload()`, `list()`, `restoreFrom(name)`, `every(hours)`) with checksums. Secrets and approvals are never in a backup. |
+
+### Hugging Face models: `kit.use('transformers')`
+
+[Transformers.js](https://huggingface.co/docs/transformers.js) 4.3.2 runs models from the Hugging Face Hub in the page,
+on WebGPU when the device has it and WebAssembly otherwise. It downloads from jsDelivr the first time it is used, and the
+browser caches the models.
+
+```js
+const tf = await kit.use('transformers');                         // createKit({ transformers: { device, dtype } })
+await tf.embed(['hello', 'world']);                                // [[…384], […384]] with Xenova/all-MiniLM-L6-v2
+await tf.run('sentiment-analysis', 'I love it');                   // any pipeline task; { model } picks the model
+await tf.run('automatic-speech-recognition', '/rec.wav', { model: 'Xenova/whisper-tiny.en' });   // files from the VFS
+await kit.embed('text', { model: 'hf:Xenova/all-MiniLM-L6-v2' });  // "hf:" models embed in the page…
+await kit.vectors.open('/notes.db', { model: 'hf:Xenova/all-MiniLM-L6-v2' });   // …in vector stores, and memory too
+```
+
+Agents get the `transformers` tool (any task, or `action: 'embed'`).
+
+### A server the agent runs: `kit.use('base')`
+
+[Jade Agent Base](https://github.com/lucky-edgelord/jade-agent-base) is a backend built on PocketBase that agents can
+run: data, server-side code, the website and settings. Connect with an agent token (`jab agent create`), and the
+server's tools become the agent's (`mcp__base__…`, within the token's scopes).
+
+```js
+const base = await kit.use('base');                                // or createKit({ base: { url, token } })
+await base.connect({ url: 'https://shop.example.com', token });    // the token is kept as the secret BASE_TOKEN
+await kit.agent({ brain: ['mcp'] });                               // the agent now has the server's tools
+await base.call('records_list', { collection: 'orders' });        // a server tool over REST
+await base.collection('products').list({ filter: 'price < 20' }); // the PocketBase records API
+await base.signIn('ada@example.com', '…');                         // or work as a signed-in user
+```
 
 ## Things to know
 
