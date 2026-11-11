@@ -1,5 +1,5 @@
-/*! Jade Agent Kit 3.0.0 | MIT | https://github.com/lucky-edgelord/Jade-agent-kit | bundles code under its own licenses: see THIRD_PARTY_NOTICES.md */
-import{b as k,d as S,e as v,f as $}from"./chunk-L3XUYPGW.js";import{a as b,b as y}from"./chunk-WXM6MTAS.js";import"./chunk-BN2DZAOB.js";var u={about:"About the user",preferences:"Preferences",projects:"Projects & people",notes:"Notes to self",learned:"Learned from chats"},M=`# Memory
+/*! Jade Agent Kit 3.1.0 | MIT | https://github.com/lucky-edgelord/Jade-agent-kit | bundles code under its own licenses: see THIRD_PARTY_NOTICES.md */
+import{b as k,d as S,e as v,f as $}from"./chunk-QBAZTYK4.js";import{a as b,b as y}from"./chunk-Q6XI22B2.js";import"./chunk-GZEGYG7Y.js";var u={about:"About the user",preferences:"Preferences",projects:"Projects & people",notes:"Notes to self",learned:"Learned from chats"},M=`# Memory
 
 The agent reads this at the start of every chat. One fact per line; edit freely.
 

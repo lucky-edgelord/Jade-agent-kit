@@ -6,8 +6,9 @@
 // Each module also works on its own: import { BM25 } from '…/dist/bm25.js'.
 import { VFS } from './vfs.js';
 import { setAssetsBase, getAssetsBase } from './util.js';
+import { embedder } from './internal/embed.js';
 
-export const VERSION = '3.0.0';
+export const VERSION = '3.1.0';
 const OLLAMA_LOCAL = 'http://localhost:11434';
 
 /** every feature: what kit.use(name) loads and how it is set up */
@@ -60,11 +61,15 @@ const FEATURES = {
   senses: brain(async k => new (await import('./senses.js')).Senses({ kit: k, ...k.config.senses })),
   usb: brain(async k => new (await import('./usb.js')).Usb({ kit: k })),
   backup: brain(async k => new (await import('./backup.js')).Backup({ kit: k, ...k.config.backup })),
+  // Jade Agent Base: a server the agent runs (createKit({ base: { url, token } }))
+  base: async k => { const b = new (await import('./base.js')).Base({ kit: k, ...k.config.base }); await b.ready; return b; },
+  // models from the Hugging Face Hub, in the page (Transformers.js)
+  transformers: brain(async k => new (await import('./transformers.js')).Transformers({ kit: k, ...k.config.transformers })),
   models: brain(async k => new (await import('./router.js')).ModelRouter({ kit: k, ...(Array.isArray(k.config.models) ? { models: k.config.models } : k.config.models) })),
 };
 // a brain feature's tools join the kit's tool list (now, or when the tools load)
 function brain(make) { return async k => { const f = await make(k); const d = f.toolDefs; if (d) { k._toolDefs.push(d); k.tools?.addAll(d); } return f; }; }
-const ALIASES = { decide: 'decisions', schedules: 'schedule', scheduler: 'schedule', node: 'js', javascript: 'js', db: 'sqlite', kg: 'knowledge', steering: 'skills', playbook: 'playbooks', flow: 'flows', plans: 'gantt', sched: 'autonomy', queue: 'autonomy', 'tool-router': 'router', 'model-router': 'models', context: 'guard', chats: 'history' };
+const ALIASES = { hf: 'transformers', 'transformers.js': 'transformers', decide: 'decisions', schedules: 'schedule', scheduler: 'schedule', node: 'js', javascript: 'js', db: 'sqlite', kg: 'knowledge', steering: 'skills', playbook: 'playbooks', flow: 'flows', plans: 'gantt', sched: 'autonomy', queue: 'autonomy', 'tool-router': 'router', 'model-router': 'models', context: 'guard', chats: 'history' };
 export const FEATURE_NAMES = Object.keys(FEATURES);
 const KEEP = new Set(['agent', 'ollama']);   // kit.agent() stays the helper; ollama sets kit.ollama (the cloud) and kit.local itself
 
@@ -133,8 +138,8 @@ export async function createKit(o = {}) {
     async tool(name, args, ctx) { return (await kit.use('tools')).call(name, args, ctx); },
     /** decide({ state, question, type: 'choice'|'score'|'yesno', options }) with a decision model */
     async decide(args) { return (await kit.use('decisions')).decide(args); },
-    /** embeddings from Ollama on a machine */
-    async embed(input, opts) { return (await kit.use('ollama')).local.embed(input, opts); },
+    /** embeddings: from Ollama on a machine, or in the page for models named "hf:<repo>" (Transformers.js) */
+    async embed(input, opts = {}) { return embedder(kit, opts.model)(input, opts); },
     /**
      * A pi-style agent on Ollama (read, write, edit, bash, search, fetch): await kit.agent({ model }).
      * brain: what else it gets, each loaded only if asked for: true (memory, skills, history, guard), 'all', or a list of
